@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<meta name="theme-color" content="#0D0F13">
+<title>Ledger</title>
+<style>
+:root{
+  --bg:#0D0F13; --surface:#151920; --surface2:#1C222B; --line:#262D38;
+  --text:#EAE7E1; --muted:#8A929E; --accent:#C9A968; --accent-dim:#9a8250;
+  --danger:#E0655A; --ok:#7FB98A;
+  --radius:14px;
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  --display: ui-serif, "New York", Georgia, serif;
+  --body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overscroll-behavior:none}
+body{background:var(--bg);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation}
+button{font-family:var(--body);border:none;background:none;color:inherit;cursor:pointer}
+.screen{position:fixed;inset:0;display:none;flex-direction:column}
+.screen.on{display:flex}
+
+/* ---------- Lock / Setup ---------- */
+#lockScreen{align-items:center;justify-content:center;gap:0;background:
+  radial-gradient(120% 90% at 50% -10%, #171d27 0%, var(--bg) 60%)}
+.keyring{width:96px;height:96px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);position:relative;margin-bottom:22px}
+.keyring::before{content:"";position:absolute;inset:-1px;border-radius:50%;
+  border:1px solid transparent;
+  background:conic-gradient(from 210deg, transparent 0 40%, var(--accent) 50%, transparent 60% 100%) border-box;
+  -webkit-mask:linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude; opacity:.9}
+.keyring svg{width:34px;height:34px;stroke:var(--accent);fill:none;stroke-width:1.5}
+.keyring.open::before{animation:spin .7s ease}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wordmark{font-family:var(--display);font-size:30px;letter-spacing:.06em;font-weight:500}
+.locksub{color:var(--muted);font-size:14px;margin-top:8px;min-height:20px;transition:color .2s}
+.locksub.err{color:var(--danger)}
+.pindots{display:flex;gap:14px;margin:30px 0 34px;min-height:12px}
+.pindots span{width:11px;height:11px;border-radius:50%;border:1px solid var(--muted);transition:all .15s}
+.pindots span.f{background:var(--accent);border-color:var(--accent)}
+.pindots.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+.pad{display:grid;grid-template-columns:repeat(3,76px);gap:16px 26px;justify-content:center}
+.pad button{width:76px;height:76px;border-radius:50%;font-size:28px;font-weight:300;color:var(--text);
+  background:rgba(255,255,255,.045);transition:background .12s}
+.pad button:active{background:rgba(201,169,104,.28)}
+.pad .ghost{background:none;font-size:15px;color:var(--muted)}
+.pad .ok{color:var(--accent);font-size:22px}
+@media (max-height:640px){.pad{grid-template-columns:repeat(3,64px);gap:10px 20px}.pad button{width:64px;height:64px;font-size:24px}}
+
+/* ---------- Gallery ---------- */
+#galleryScreen{background:var(--bg)}
+.top{padding:calc(var(--sat) + 10px) 16px 10px;display:flex;align-items:center;gap:10px;
+  position:sticky;top:0;background:linear-gradient(var(--bg) 75%, transparent);z-index:5}
+.top h1{font-family:var(--display);font-size:24px;font-weight:500;letter-spacing:.04em;flex:1}
+.iconbtn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--line)}
+.iconbtn svg{width:18px;height:18px;stroke:var(--text);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.textbtn{font-size:15px;color:var(--accent);padding:8px 10px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 16px 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:7px 14px;border-radius:20px;font-size:13.5px;color:var(--muted);
+  background:var(--surface);border:1px solid var(--line)}
+.chip.sel{color:#0D0F13;background:var(--accent);border-color:var(--accent);font-weight:600}
+#grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
+  align-content:start;padding-bottom:calc(var(--sab) + 96px)}
+.tile{position:relative;aspect-ratio:1;background:var(--surface);overflow:hidden}
+.tile img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.tile .ck{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+  border:1.5px solid rgba(255,255,255,.85);background:rgba(0,0,0,.25);display:none;align-items:center;justify-content:center}
+.selecting .tile .ck{display:flex}
+.tile.sel .ck{background:var(--accent);border-color:var(--accent)}
+.tile.sel .ck::after{content:"✓";font-size:13px;color:#0D0F13;font-weight:700}
+.tile.sel img{opacity:.55}
+.empty{grid-column:1/-1;text-align:center;padding:90px 40px;color:var(--muted)}
+.empty .keyring{margin:0 auto 20px;opacity:.7}
+.empty h2{font-family:var(--display);font-weight:500;color:var(--text);font-size:20px;margin-bottom:8px}
+.empty p{font-size:14px;line-height:1.5}
+.fabrow{position:fixed;right:20px;bottom:calc(var(--sab) + 24px);display:flex;flex-direction:column;gap:14px;z-index:6}
+.fab{width:58px;height:58px;border-radius:50%;background:var(--accent);color:#0D0F13;font-size:30px;font-weight:300;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(201,169,104,.35)}
+.fab:active{transform:scale(.94)}
+.fab.cam{background:var(--surface2);border:1px solid var(--line);box-shadow:0 8px 20px rgba(0,0,0,.4)}
+.fab.cam svg{width:24px;height:24px;stroke:var(--text);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Camera ---------- */
+#camScreen{background:#000;z-index:15}
+#camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#camVideo.mirror{transform:scaleX(-1)}
+.camtop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
+  padding:calc(var(--sat) + 12px) 16px 0;z-index:3}
+.cambot{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;
+  padding:20px 34px calc(var(--sab) + 26px);z-index:3;background:linear-gradient(transparent,rgba(0,0,0,.45))}
+.shutter{width:74px;height:74px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);
+  transition:transform .1s}
+.shutter:active{transform:scale(.88);background:#fff}
+.camside{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.camside svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.camside img{width:100%;height:100%;object-fit:cover}
+#camFlash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:2}
+#camFlash.pop{animation:pop .28s ease}
+@keyframes pop{15%{opacity:.85}100%{opacity:0}}
+#camBadge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--accent);
+  color:#0D0F13;font-size:11.5px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 5px}
+.selbar{position:fixed;left:0;right:0;bottom:0;padding:12px 20px calc(var(--sab) + 14px);
+  background:rgba(21,25,32,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  display:none;justify-content:space-around;z-index:7}
+.selecting .selbar{display:flex}
+.selecting .fabrow{display:none}
+.selbar button{font-size:15px;padding:8px 14px;color:var(--text)}
+.selbar .del{color:var(--danger)}
+.count{font-size:13px;color:var(--muted);padding:0 16px 8px}
+
+/* ---------- Viewer ---------- */
+#viewer{background:#000;z-index:20}
+#viewer .vtop,#viewer .vbot{position:absolute;left:0;right:0;display:flex;align-items:center;z-index:3;
+  transition:opacity .2s}
+#viewer .vtop{top:0;padding:calc(var(--sat) + 10px) 16px 14px;gap:12px;
+  background:linear-gradient(rgba(0,0,0,.6),transparent)}
+#viewer .vbot{bottom:0;padding:14px 16px calc(var(--sab) + 14px);justify-content:space-between;
+  background:linear-gradient(transparent,rgba(0,0,0,.6))}
+#viewer.zen .vtop,#viewer.zen .vbot{opacity:0;pointer-events:none}
+.vmeta{flex:1;min-width:0}
+.vmeta b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vmeta span{font-size:12px;color:var(--muted)}
+#stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+#stage img{max-width:100%;max-height:100%;transform-origin:center;will-change:transform}
+
+/* ---------- Sheets / modals ---------- */
+.sheetwrap{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30;display:none;align-items:flex-end}
+.sheetwrap.on{display:flex}
+.sheet{width:100%;background:var(--surface);border-radius:18px 18px 0 0;padding:10px 18px calc(var(--sab) + 18px);
+  max-height:82vh;overflow-y:auto;animation:up .22s ease}
+@keyframes up{from{transform:translateY(40px);opacity:.5}}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 14px}
+.sheet h3{font-family:var(--display);font-weight:500;font-size:19px;margin-bottom:14px}
+.row{display:flex;align-items:center;gap:12px;width:100%;padding:15px 2px;border-bottom:1px solid var(--line);
+  font-size:15.5px;text-align:left;color:var(--text)}
+.row:last-child{border-bottom:none}
+.row svg{width:19px;height:19px;stroke:var(--accent);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.row .sub{margin-left:auto;color:var(--muted);font-size:13.5px;text-align:right}
+.row.danger, .row.danger svg{color:var(--danger);stroke:var(--danger)}
+.meter{height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:8px}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.55;padding:12px 2px 2px}
+
+/* ---------- Toast & progress ---------- */
+#toast{position:fixed;left:50%;bottom:calc(var(--sab) + 100px);transform:translateX(-50%) translateY(12px);
+  background:var(--surface2);border:1px solid var(--line);color:var(--text);font-size:14px;
+  padding:11px 18px;border-radius:24px;opacity:0;transition:all .25s;z-index:60;pointer-events:none;
+  max-width:86vw;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+#busy{position:fixed;inset:0;background:rgba(13,15,19,.85);backdrop-filter:blur(6px);z-index:50;
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#busy.on{display:flex}
+#busy .spin{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);
+  animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+#busyLabel{font-size:14px;color:var(--muted)}
+.chipdiv{flex:0 0 1px;align-self:stretch;background:var(--line);margin:4px 3px}
+.tile .dur{position:absolute;right:5px;bottom:4px;font-size:10.5px;background:rgba(0,0,0,.55);padding:1px 6px;border-radius:6px;color:#fff}
+.tile .fv{position:absolute;left:6px;bottom:4px;font-size:12px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.75)}
+.selbar button{font-size:14px;padding:8px 6px}
+#recTimer{position:absolute;top:calc(var(--sat) + 64px);left:50%;transform:translateX(-50%);background:rgba(224,101,90,.92);
+  color:#fff;font-size:13px;font-weight:600;padding:4px 13px;border-radius:14px;display:none;z-index:3}
+.shutter.rec{border-color:var(--danger);background:rgba(224,101,90,.55)}
+.camside.mode svg{stroke:var(--accent)}
+.dupgroup{border-bottom:1px solid var(--line);padding:13px 0}
+.dupgroup:last-child{border-bottom:none}
+.dupgroup .thumbs{display:flex;gap:6px;overflow-x:auto;margin-bottom:9px;scrollbar-width:none}
+.dupgroup .thumbs::-webkit-scrollbar{display:none}
+.dupgroup .thumbs img{width:58px;height:58px;object-fit:cover;border-radius:9px;background:var(--surface2);flex:0 0 auto}
+.dupgroup .meta{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:var(--muted);gap:10px}
+.dupgroup .meta button{color:var(--danger);font-size:13.5px;flex-shrink:0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ============ LOCK / SETUP ============ -->
+<div class="screen on" id="lockScreen">
+  <div class="keyring" id="keyring">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="9.5" r="3.2"/><path d="M12 12.7 L10.4 18.5 h3.2 Z"/></svg>
+  </div>
+  <div class="wordmark">Ledger</div>
+  <div class="locksub" id="lockSub">Enter passcode</div>
+  <div class="pindots" id="pinDots"></div>
+  <div class="pad" id="pad"></div>
+</div>
+
+<!-- ============ GALLERY ============ -->
+<div class="screen" id="galleryScreen">
+  <div class="top">
+    <h1 id="titleH">Ledger</h1>
+    <button class="textbtn" id="selectBtn">Select</button>
+    <button class="iconbtn" id="settingsBtn" aria-label="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>
+    </button>
+    <button class="iconbtn" id="lockNowBtn" aria-label="Lock">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    </button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="count" id="countLbl"></div>
+  <div id="grid"></div>
+  <div class="fabrow">
+    <button class="fab cam" id="camFab" aria-label="Take photo">
+      <svg viewBox="0 0 24 24"><path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.4"/></svg>
+    </button>
+    <button class="fab" id="fab" aria-label="Add photos">+</button>
+  </div>
+  <div class="selbar">
+    <button id="selAll">All</button>
+    <button id="selFav">♥ Fav</button>
+    <button id="selMove">Move</button>
+    <button id="selShare">Share</button>
+    <button class="del" id="selDelete">Delete</button>
+  </div>
+  <input type="file" id="fileInput" accept="image/*,video/*" multiple hidden>
+  <input type="file" id="captureInput" accept="image/*" capture="environment" hidden>
+  <input type="file" id="restoreInput" accept=".ledger,application/json" hidden>
+</div>
+
+<!-- ============ CAMERA ============ -->
+<div class="screen" id="camScreen">
+  <video id="camVideo" autoplay playsinline muted></video>
+  <div id="camFlash"></div>
+  <div id="recTimer">0:00</div>
+  <div class="camtop">
+    <button class="iconbtn" id="camClose" aria-label="Close camera">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <button class="iconbtn" id="camFlip" aria-label="Flip camera">
+      <svg viewBox="0 0 24 24"><path d="M4 9a8 8 0 0 1 14-3l2 2M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M20 4v4h-4M4 20v-4h4"/></svg>
+    </button>
+  </div>
+  <div class="cambot">
+    <div class="camside" id="camLast" style="position:relative">
+      <svg viewBox="0 0 24 24" id="camLastIcon"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9.5" cy="9.5" r="1.6"/><path d="M4 16l4.5-4.5L13 16l3-3 4 4"/></svg>
+      <span id="camBadge"></span>
+    </div>
+    <button class="shutter" id="shutterBtn" aria-label="Take photo"></button>
+    <button class="camside" id="camModeBtn" aria-label="Switch photo/video">
+      <svg viewBox="0 0 24 24" id="camModeIcon"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ============ VIEWER ============ -->
+<div class="screen" id="viewer">
+  <div id="stage"><img id="stageImg" alt=""><video id="stageVid" playsinline controls style="max-width:100%;max-height:100%;display:none"></video></div>
+  <div class="vtop">
+    <button class="iconbtn" id="vClose" aria-label="Close">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="vmeta"><b id="vName"></b><span id="vDate"></span></div>
+  </div>
+  <div class="vbot">
+    <button class="textbtn" id="vFav" style="font-size:20px">♡</button>
+    <button class="textbtn" id="vAlbum">Move</button>
+    <button class="textbtn" id="vShare">Share</button>
+    <button class="textbtn" style="color:var(--danger)" id="vDelete">Delete</button>
+  </div>
+</div>
+
+<!-- ============ SETTINGS SHEET ============ -->
+<div class="sheetwrap" id="settingsSheet">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>Settings</h3>
+    <div class="row" style="display:block">
+      <div style="display:flex;justify-content:space-between;font-size:14px">
+        <span>Storage used</span><span class="sub" id="storText">–</span>
+      </div>
+      <div class="meter"><i id="storBar" style="width:0%"></i></div>
+    </div>
+    <button class="row" id="exportBtn">
+      <svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+      Export encrypted backup<span class="sub">.ledger file</span>
+    </button>
+    <button class="row" id="restoreBtn">
+      <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      Restore from backup
+    </button>
+    <button class="row" id="dupBtn">
+      <svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+      Find duplicates
+    </button>
+    <button class="row" id="verifyBtn">
+      <svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+      Verify vault integrity
+    </button>
+    <button class="row" id="changePinBtn">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Change passcode
+    </button>
+    <button class="row" id="flipBtn">
+      <svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M3 12h2M19 12h2"/></svg>
+      Flip face-down<span class="sub" id="flipLbl">Off</span>
+    </button>
+    <button class="row" id="autoLockBtn">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Auto-lock<span class="sub" id="autoLockLbl">3 min</span>
+    </button>
+    <div class="note">Everything is encrypted with your passcode and stored only on this device. There is no recovery if the passcode is forgotten — keep an exported backup somewhere safe. Tip: after importing photos here, delete the originals from the Photos app (including Recently Deleted).</div>
+  </div>
+</div>
+
+<!-- ============ ALBUM SHEET ============ -->
+<div class="sheetwrap" id="albumSheet">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>Move to album</h3>
+    <div id="albumList"></div>
+    <button class="row" id="newAlbumBtn">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New album
+    </button>
+  </div>
+</div>
+
+<!-- ============ DUPLICATES SHEET ============ -->
+<div class="sheetwrap" id="dupSheet">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>Duplicates</h3>
+    <div id="dupList"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="busy"><div class="spin"></div><div id="busyLabel">Working…</div></div>
+
+<script>
+/* ================= Utilities ================= */
+const $=id=>document.getElementById(id);
+const enc=new TextEncoder(), dec=new TextDecoder();
+function b2a(buf){let s='';const b=new Uint8Array(buf);for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s);}
+function a2b(str){const s=atob(str),b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b.buffer;}
+function toast(m,ms=2200){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),ms);}
+function busy(on,label){$('busy').classList.toggle('on',!!on);if(label)$('busyLabel').textContent=label;}
+function fmtBytes(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(0)+' KB';if(n<1073741824)return (n/1048576).toFixed(1)+' MB';return (n/1073741824).toFixed(2)+' GB';}
+function fmtDate(ts){return new Date(ts).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})+' · '+new Date(ts).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
+
+/* ================= IndexedDB ================= */
+let db;
+function openDB(){return new Promise((res,rej)=>{
+  const r=indexedDB.open('ledger-vault',1);
+  r.onupgradeneeded=e=>{const d=e.target.result;
+    d.createObjectStore('meta');
+    d.createObjectStore('photos',{keyPath:'id'});
+    d.createObjectStore('blobs',{keyPath:'id'});};
+  r.onsuccess=()=>{db=r.result;res();};
+  r.onerror=()=>rej(r.error);
+});}
+function tx(store,mode,fn){return new Promise((res,rej)=>{
+  const t=db.transaction(store,mode),s=t.objectStore(store);let out;
+  const req=fn(s); if(req) req.onsuccess=()=>out=req.result;
+  t.oncomplete=()=>res(out); t.onerror=()=>rej(t.error);
+});}
+const metaGet=k=>tx('meta','readonly',s=>s.get(k));
+const metaSet=(k,v)=>tx('meta','readwrite',s=>s.put(v,k));
+const photosAll=()=>tx('photos','readonly',s=>s.getAll());
+const photoPut=p=>tx('photos','readwrite',s=>s.put(p));
+const photoDel=id=>tx('photos','readwrite',s=>s.delete(id));
+const blobGet=id=>tx('blobs','readonly',s=>s.get(id));
+const blobPut=b=>tx('blobs','readwrite',s=>s.put(b));
+const blobDel=id=>tx('blobs','readwrite',s=>s.delete(id));
+
+/* ================= Crypto =================
+   PIN --PBKDF2--> wrapping key --unwraps--> master AES-256-GCM key.
+   Changing the PIN only re-wraps the master key. */
+const ITER=310000;
+let masterKey=null; // in memory only while unlocked
+async function pinKey(pin,salt){
+  const km=await crypto.subtle.importKey('raw',enc.encode(pin),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:ITER,hash:'SHA-256'},km,
+    {name:'AES-GCM',length:256},false,['wrapKey','unwrapKey']);
+}
+async function createVault(pin){
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const wrapIv=crypto.getRandomValues(new Uint8Array(12));
+  const wk=await pinKey(pin,salt);
+  const mk=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+  const wrapped=await crypto.subtle.wrapKey('raw',mk,wk,{name:'AES-GCM',iv:wrapIv});
+  await metaSet('vault',{salt:b2a(salt),wrapIv:b2a(wrapIv),wrapped:b2a(wrapped),pinLen:pin.length,created:Date.now()});
+  masterKey=mk;
+}
+async function unlockVault(pin){
+  const v=await metaGet('vault'); if(!v) return false;
+  try{
+    const wk=await pinKey(pin,new Uint8Array(a2b(v.salt)));
+    masterKey=await crypto.subtle.unwrapKey('raw',new Uint8Array(a2b(v.wrapped)),wk,
+      {name:'AES-GCM',iv:new Uint8Array(a2b(v.wrapIv))},{name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+    return true;
+  }catch(e){return false;}
+}
+async function rewrapPin(newPin){
+  const v=await metaGet('vault');
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const wrapIv=crypto.getRandomValues(new Uint8Array(12));
+  const wk=await pinKey(newPin,salt);
+  const wrapped=await crypto.subtle.wrapKey('raw',masterKey,wk,{name:'AES-GCM',iv:wrapIv});
+  await metaSet('vault',{...v,salt:b2a(salt),wrapIv:b2a(wrapIv),wrapped:b2a(wrapped),pinLen:newPin.length});
+}
+async function encBuf(buf){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const data=await crypto.subtle.encrypt({name:'AES-GCM',iv},masterKey,buf);
+  return {iv:iv.buffer,data};
+}
+async function decBuf(iv,data){
+  return crypto.subtle.decrypt({name:'AES-GCM',iv:new Uint8Array(iv)},masterKey,data);
+}
+
+/* ================= Lock screen ================= */
+let pinBuf='', mode='unlock', firstPin='', vaultMeta=null;
+const idleChoices=[60000,180000,300000,600000], idleNames=['1 min','3 min','5 min','10 min'];
+let idleMs=+(localStorage.getItem('ledger-idle')||180000);
+
+function buildPad(){
+  const pad=$('pad'); pad.innerHTML='';
+  [1,2,3,4,5,6,7,8,9].forEach(n=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>key(n);pad.appendChild(b);});
+  const g=document.createElement('button');g.className='ghost';g.id='padLeft';pad.appendChild(g);
+  const z=document.createElement('button');z.textContent='0';z.onclick=()=>key(0);pad.appendChild(z);
+  const ok=document.createElement('button');ok.className='ok';ok.textContent='✓';ok.onclick=confirmPin;pad.appendChild(ok);
+  g.onclick=()=>{pinBuf=pinBuf.slice(0,-1);drawDots();};
+  g.textContent='⌫';
+}
+function drawDots(){
+  const d=$('pinDots'); d.innerHTML='';
+  const len=Math.max(pinBuf.length, mode==='unlock'&&vaultMeta?vaultMeta.pinLen:pinBuf.length||0);
+  const shown=mode==='unlock'&&vaultMeta?vaultMeta.pinLen:Math.max(4,pinBuf.length);
+  for(let i=0;i<shown;i++){const s=document.createElement('span');if(i<pinBuf.length)s.className='f';d.appendChild(s);}
+}
+function key(n){
+  if(pinBuf.length>=8) return;
+  pinBuf+=n; drawDots();
+  if(mode==='unlock'&&vaultMeta&&pinBuf.length===vaultMeta.pinLen) confirmPin();
+}
+function shake(msg){
+  $('lockSub').textContent=msg; $('lockSub').classList.add('err');
+  $('pinDots').classList.add('shake');
+  setTimeout(()=>{$('pinDots').classList.remove('shake');pinBuf='';drawDots();},420);
+  setTimeout(()=>{$('lockSub').classList.remove('err');setSub();},1600);
+}
+function setSub(){
+  $('lockSub').textContent = mode==='unlock'?'Enter passcode'
+    : mode==='setup'?'Create a passcode (4–8 digits)'
+    : mode==='setup2'?'Re-enter to confirm'
+    : mode==='change'?'New passcode (4–8 digits)'
+    : 'Re-enter to confirm';
+}
+async function confirmPin(){
+  if(mode==='unlock'){
+    if(!pinBuf.length) return;
+    busy(true,'Unlocking…');
+    const ok=await unlockVault(pinBuf); busy(false);
+    if(ok){$('keyring').classList.add('open');pinBuf='';setTimeout(()=>{$('keyring').classList.remove('open');showGallery();},350);}
+    else shake('Wrong passcode');
+  }else if(mode==='setup'||mode==='change'){
+    if(pinBuf.length<4){shake('Use at least 4 digits');return;}
+    firstPin=pinBuf; pinBuf=''; mode=mode==='setup'?'setup2':'change2'; setSub(); drawDots();
+  }else{ // confirm step
+    if(pinBuf!==firstPin){pinBuf='';mode=mode==='setup2'?'setup':'change';shake("Didn't match — start over");return;}
+    busy(true,'Securing…');
+    if(mode==='setup2'){await createVault(firstPin);vaultMeta=await metaGet('vault');busy(false);showGallery();toast('Vault created');}
+    else{await rewrapPin(firstPin);vaultMeta=await metaGet('vault');busy(false);$('settingsSheet').classList.remove('on');showGallery();toast('Passcode changed');}
+    pinBuf=''; firstPin='';
+  }
+}
+function lock(){
+  masterKey=null; pinBuf=''; mode='unlock'; setSub(); drawDots();
+  closeViewer(true); exitSelect();
+  try{stopCam();}catch(e){} $('camScreen').classList.remove('on');
+  document.querySelectorAll('#grid img,#stageImg').forEach(i=>{if(i.src.startsWith('blob:'))URL.revokeObjectURL(i.src);i.removeAttribute('src');});
+  $('grid').innerHTML='';
+  $('galleryScreen').classList.remove('on'); $('viewer').classList.remove('on');
+  document.querySelectorAll('.sheetwrap').forEach(s=>s.classList.remove('on'));
+  $('lockScreen').classList.add('on');
+}
+
+/* ================= Gallery ================= */
+let photos=[], curAlbum='__all', selecting=false, selected=new Set(), viewIdx=-1, thumbURLs=new Map();
+
+async function showGallery(){
+  $('lockScreen').classList.remove('on');
+  $('galleryScreen').classList.add('on');
+  await refresh();
+  updateStorage();
+}
+async function refresh(){
+  photos=(await photosAll()).sort((a,b)=>b.created-a.created);
+  renderChips(); renderGrid();
+}
+function albums(){return [...new Set(photos.map(p=>p.album).filter(Boolean))].sort();}
+const isVid=p=>(p.type||'').startsWith('video');
+function fmtDur(s){s=Math.round(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+const LARGE=5*1048576, RECENT_MS=30*864e5;
+function collCount(k){
+  switch(k){
+    case '__fav':return photos.filter(p=>p.fav).length;
+    case '__recent':{const c=Date.now()-RECENT_MS;return photos.filter(p=>(p.added||p.created)>c).length;}
+    case '__video':return photos.filter(isVid).length;
+    case '__shot':return photos.filter(p=>p.shot).length;
+    case '__large':return photos.filter(p=>(p.size||0)>=LARGE).length;
+  }return 0;
+}
+function renderChips(){
+  const c=$('chips'); c.innerHTML='';
+  const mk=(label,val)=>{const b=document.createElement('button');b.className='chip'+(curAlbum===val?' sel':'');
+    b.textContent=label;b.onclick=()=>{curAlbum=val;renderChips();renderGrid();};c.appendChild(b);};
+  mk('All','__all');
+  mk('♥ Favorites','__fav');
+  [['__recent','Recent'],['__video','Videos'],['__shot','Screenshots'],['__large','Large']]
+    .forEach(([k,l])=>{if(collCount(k))mk(l,k);});
+  const as=albums();
+  if(as.length){const d=document.createElement('div');d.className='chipdiv';c.appendChild(d);}
+  as.forEach(a=>mk(a,a));
+}
+function visible(){
+  switch(curAlbum){
+    case '__all':return photos;
+    case '__fav':return photos.filter(p=>p.fav);
+    case '__recent':{const c=Date.now()-RECENT_MS;return photos.filter(p=>(p.added||p.created)>c);}
+    case '__video':return photos.filter(isVid);
+    case '__shot':return photos.filter(p=>p.shot);
+    case '__large':return photos.filter(p=>(p.size||0)>=LARGE).sort((a,b)=>(b.size||0)-(a.size||0));
+    default:return photos.filter(p=>p.album===curAlbum);
+  }
+}
+const EMPTY_MSG={__fav:'No favorites yet — tap ♡ in the viewer.',__recent:'Nothing added in the last 30 days.',
+  __video:'No videos yet — import some or record with the camera.',__shot:'No screenshots detected.',
+  __large:'No items over 5 MB.'};
+async function renderGrid(){
+  const g=$('grid'); g.innerHTML='';
+  const list=visible();
+  $('countLbl').textContent=list.length?list.length+(list.length===1?' item':' items'):'';
+  if(!list.length){
+    g.innerHTML=`<div class="empty">
+      <div class="keyring"><svg viewBox="0 0 24 24"><circle cx="12" cy="9.5" r="3.2"/><path d="M12 12.7 L10.4 18.5 h3.2 Z"/></svg></div>
+      <h2>${curAlbum==='__all'?'Your vault is empty':'Nothing here yet'}</h2>
+      <p>${curAlbum==='__all'?'Use the camera or tap + to add photos. Everything is encrypted on this device — nothing reaches the camera roll.':(EMPTY_MSG[curAlbum]||'Move photos here from the Select menu.')}</p></div>`;
+    return;
+  }
+  for(const p of list){
+    const t=document.createElement('div'); t.className='tile'; t.dataset.id=p.id;
+    const img=document.createElement('img'); img.alt='';
+    const ck=document.createElement('div'); ck.className='ck';
+    t.append(img,ck);
+    if(isVid(p)){const d=document.createElement('span');d.className='dur';d.textContent=fmtDur(p.dur);t.appendChild(d);}
+    if(p.fav){const h=document.createElement('span');h.className='fv';h.textContent='♥';t.appendChild(h);}
+    g.appendChild(t);
+    t.onclick=()=>selecting?toggleSel(p.id,t):openViewer(p.id);
+    let pressT; t.addEventListener('touchstart',()=>{pressT=setTimeout(()=>{if(!selecting){enterSelect();toggleSel(p.id,t);}},480);},{passive:true});
+    t.addEventListener('touchend',()=>clearTimeout(pressT)); t.addEventListener('touchmove',()=>clearTimeout(pressT),{passive:true});
+    if(thumbURLs.has(p.id)){img.src=thumbURLs.get(p.id);}
+    else decBuf(p.thumbIv,p.thumb).then(buf=>{
+      const u=URL.createObjectURL(new Blob([buf],{type:'image/jpeg'}));
+      thumbURLs.set(p.id,u); img.src=u;
+    }).catch(()=>{t.style.background='var(--danger)';});
+  }
+}
+
+/* ---------- selection ---------- */
+function enterSelect(){selecting=true;selected.clear();$('galleryScreen').classList.add('selecting');$('selectBtn').textContent='Cancel';}
+function exitSelect(){selecting=false;selected.clear();$('galleryScreen').classList.remove('selecting');$('selectBtn').textContent='Select';
+  document.querySelectorAll('.tile.sel').forEach(t=>t.classList.remove('sel'));}
+function toggleSel(id,tile){if(selected.has(id)){selected.delete(id);tile.classList.remove('sel');}else{selected.add(id);tile.classList.add('sel');}}
+$('selectBtn').onclick=()=>selecting?exitSelect():enterSelect();
+$('selAll').onclick=()=>{visible().forEach(p=>selected.add(p.id));document.querySelectorAll('.tile').forEach(t=>t.classList.add('sel'));};
+$('selDelete').onclick=async()=>{
+  if(!selected.size) return toast('Nothing selected');
+  if(!confirm(`Delete ${selected.size} item${selected.size>1?'s':''}? This cannot be undone.`)) return;
+  busy(true,'Deleting…');
+  for(const id of selected){await photoDel(id);await blobDel(id);const u=thumbURLs.get(id);if(u){URL.revokeObjectURL(u);thumbURLs.delete(id);}}
+  busy(false); exitSelect(); await refresh(); updateStorage(); toast('Deleted');
+};
+$('selMove').onclick=()=>{if(!selected.size)return toast('Nothing selected');openAlbumSheet([...selected]);};
+$('selFav').onclick=async()=>{
+  if(!selected.size) return toast('Nothing selected');
+  const list=photos.filter(p=>selected.has(p.id));
+  const target=!list.every(p=>p.fav);
+  for(const p of list){p.fav=target;await photoPut(p);}
+  exitSelect(); renderChips(); renderGrid();
+  toast(target?'Added to Favorites':'Removed from Favorites');
+};
+$('selShare').onclick=()=>{if(!selected.size)return toast('Nothing selected');shareIds([...selected]);};
+
+/* ---------- share (export to camera roll etc.) ---------- */
+async function shareIds(ids){
+  if(!navigator.share) return toast('Sharing is not available on this device');
+  if(ids.length>10) return toast('Share up to 10 items at a time');
+  busy(true,'Decrypting…');
+  try{
+    const files=[];
+    for(const id of ids){
+      const p=photos.find(x=>x.id===id); if(!p) continue;
+      const r=await blobGet(id);
+      const buf=await decBuf(r.iv,r.data);
+      const ext=isVid(p)?'.mp4':(p.type||'').includes('png')?'.png':'.jpg';
+      const nm=((p.name||'photo').replace(/\.[a-z0-9]{2,5}$/i,'')||'photo')+ext;
+      files.push(new File([buf],nm,{type:p.type||'image/jpeg'}));
+    }
+    busy(false);
+    if(navigator.canShare&&!navigator.canShare({files})) return toast('This device cannot share these files');
+    await navigator.share({files});
+  }catch(e){
+    busy(false);
+    if(!e||e.name!=='AbortError') toast('Share failed — try one item at a time');
+  }
+}
+
+/* ---------- import & analysis ---------- */
+const SHOT_DIMS=new Set(['640x1136','750x1334','828x1792','1080x1920','1080x2340','1125x2436','1170x2532',
+  '1179x2556','1206x2622','1242x2208','1242x2688','1284x2778','1290x2796','1320x2868','1488x2266',
+  '1536x2048','1620x2160','1640x2360','1668x2388','2048x2732']);
+function isShot(name,type,w,h){
+  if(/screen\s?shot/i.test(name||'')) return true;
+  if(type!=='image/png') return false;
+  return SHOT_DIMS.has(Math.min(w,h)+'x'+Math.max(w,h));
+}
+async function sha256(buf){return b2a(await crypto.subtle.digest('SHA-256',buf));}
+function loadImg(blob){return new Promise((res,rej)=>{
+  const u=URL.createObjectURL(blob),i=new Image();
+  i.onload=()=>res({img:i,u}); i.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('decode'));};
+  i.src=u;});}
+function dhashFrom(src,sw,sh){ // 64-bit perceptual difference hash → 16 hex chars
+  const c=document.createElement('canvas');c.width=9;c.height=8;
+  c.getContext('2d').drawImage(src,0,0,9,8);
+  const d=c.getContext('2d').getImageData(0,0,9,8).data,g=[];
+  for(let i=0;i<72;i++)g.push(d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114);
+  let hex='',nib=0,cnt=0;
+  for(let r=0;r<8;r++)for(let col=0;col<8;col++){
+    nib=(nib<<1)|(g[r*9+col]<g[r*9+col+1]?1:0);
+    if(++cnt===4){hex+=nib.toString(16);nib=0;cnt=0;}
+  }
+  return hex;
+}
+async function analyzeImage(blob){
+  const {img,u}=await loadImg(blob);
+  const m=480,r=Math.min(1,m/Math.max(img.width,img.height));
+  const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*r));c.height=Math.max(1,Math.round(img.height*r));
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  const dhash=dhashFrom(img), w=img.width, h=img.height;
+  URL.revokeObjectURL(u);
+  const thumb=await new Promise((res,rej)=>c.toBlob(b=>b?b.arrayBuffer().then(res):rej(new Error('thumb')),'image/jpeg',.78));
+  return {thumb,w,h,dhash};
+}
+function analyzeVideo(blob){return new Promise((res,rej)=>{
+  const u=URL.createObjectURL(blob),v=document.createElement('video');
+  v.muted=true;v.playsInline=true;v.preload='auto';
+  const fail=()=>{URL.revokeObjectURL(u);rej(new Error('video'));};
+  v.onerror=fail;
+  v.onloadedmetadata=()=>{try{v.currentTime=Math.min(.3,(v.duration||1)/2);}catch(e){fail();}};
+  v.onseeked=()=>{
+    try{
+      const m=480,r=Math.min(1,m/Math.max(v.videoWidth||m,v.videoHeight||m));
+      const c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round((v.videoWidth||m)*r));c.height=Math.max(1,Math.round((v.videoHeight||m)*r));
+      c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+      const out={w:v.videoWidth,h:v.videoHeight,dur:v.duration||0};
+      URL.revokeObjectURL(u);
+      c.toBlob(b=>b?b.arrayBuffer().then(t=>res({...out,thumb:t})):rej(new Error('thumb')),'image/jpeg',.75);
+    }catch(e){fail();}
+  };
+  v.src=u;
+});}
+function targetAlbum(){return curAlbum.startsWith('__')?'':curAlbum;}
+async function addImage(f,nameOverride){
+  const buf=await f.arrayBuffer();
+  const a=await analyzeImage(f);
+  const eData=await encBuf(buf), eThumb=await encBuf(a.thumb), sha=await sha256(buf);
+  const id=crypto.randomUUID(), name=nameOverride||f.name||'Photo';
+  await photoPut({id,name,type:f.type||'image/jpeg',album:targetAlbum(),created:f.lastModified||Date.now(),
+    added:Date.now(),size:buf.byteLength,w:a.w,h:a.h,dhash:a.dhash,sha,fav:false,
+    shot:isShot(name,f.type,a.w,a.h),thumbIv:eThumb.iv,thumb:eThumb.data});
+  await blobPut({id,iv:eData.iv,data:eData.data});
+  return a.thumb;
+}
+async function addVideo(f,nameOverride){
+  const buf=await f.arrayBuffer();
+  const a=await analyzeVideo(f);
+  const eData=await encBuf(buf), eThumb=await encBuf(a.thumb), sha=await sha256(buf);
+  const id=crypto.randomUUID();
+  await photoPut({id,name:nameOverride||f.name||'Video',type:f.type||'video/mp4',album:targetAlbum(),
+    created:f.lastModified||Date.now(),added:Date.now(),size:buf.byteLength,w:a.w,h:a.h,dur:a.dur,sha,fav:false,
+    shot:false,thumbIv:eThumb.iv,thumb:eThumb.data});
+  await blobPut({id,iv:eData.iv,data:eData.data});
+  return a.thumb;
+}
+$('fab').onclick=()=>$('fileInput').click();
+$('fileInput').onchange=async e=>{
+  const files=[...e.target.files]; e.target.value='';
+  if(!files.length) return;
+  const big=files.filter(f=>f.size>200*1048576);
+  if(big.length&&!confirm(`${big.length} file${big.length>1?'s are':' is'} over 200 MB. Very large videos may not play back smoothly. Add anyway?`)) return;
+  busy(true,`Encrypting 0 / ${files.length}`);
+  let done=0, fail=0;
+  for(const f of files){
+    try{ if((f.type||'').startsWith('video')) await addVideo(f); else await addImage(f); }
+    catch(err){fail++;}
+    done++; $('busyLabel').textContent=`Encrypting ${done} / ${files.length}`;
+  }
+  busy(false); await refresh(); updateStorage();
+  toast(fail?`Added ${done-fail}, ${fail} failed`:`Added ${done} item${done>1?'s':''} — you can now delete the originals from Photos`,3400);
+};
+
+/* ================= Viewer ================= */
+let curURL=null;
+const sVid=$('stageVid');
+async function openViewer(id){
+  viewIdx=visible().findIndex(p=>p.id===id);
+  if(viewIdx<0) return;
+  $('viewer').classList.add('on'); $('viewer').classList.remove('zen');
+  await loadView();
+}
+async function loadView(){
+  const p=visible()[viewIdx]; if(!p) return closeViewer();
+  $('vName').textContent=p.name||'Photo';
+  $('vDate').textContent=fmtDate(p.created)+(p.album?' · '+p.album:'')+(p.size?' · '+fmtBytes(p.size):'');
+  $('vFav').textContent=p.fav?'♥':'♡'; $('vFav').style.color=p.fav?'var(--accent)':'';
+  resetZoom();
+  const rec=await blobGet(p.id);
+  try{
+    const buf=await decBuf(rec.iv,rec.data);
+    if(curURL) URL.revokeObjectURL(curURL);
+    curURL=URL.createObjectURL(new Blob([buf],{type:p.type}));
+    if(isVid(p)){
+      sImg.style.display='none'; sImg.removeAttribute('src');
+      sVid.style.display='block'; sVid.src=curURL;
+    }else{
+      sVid.pause(); sVid.removeAttribute('src'); sVid.style.display='none';
+      sImg.style.display=''; sImg.src=curURL;
+    }
+  }catch(e){toast('Could not decrypt this item');}
+}
+function closeViewer(silent){
+  $('viewer').classList.remove('on');
+  sVid.pause(); sVid.removeAttribute('src'); sVid.style.display='none';
+  if(curURL){URL.revokeObjectURL(curURL);curURL=null;}
+  $('stageImg').removeAttribute('src'); viewIdx=-1;
+}
+$('vClose').onclick=()=>closeViewer();
+$('vDelete').onclick=async()=>{
+  const p=visible()[viewIdx];
+  if(!confirm('Delete this item? This cannot be undone.')) return;
+  await photoDel(p.id); await blobDel(p.id);
+  const u=thumbURLs.get(p.id); if(u){URL.revokeObjectURL(u);thumbURLs.delete(p.id);}
+  closeViewer(); await refresh(); updateStorage(); toast('Deleted');
+};
+$('vAlbum').onclick=()=>openAlbumSheet([visible()[viewIdx].id]);
+$('vFav').onclick=async()=>{
+  const p=visible()[viewIdx]; if(!p) return;
+  p.fav=!p.fav; await photoPut(p);
+  $('vFav').textContent=p.fav?'♥':'♡'; $('vFav').style.color=p.fav?'var(--accent)':'';
+  renderChips(); renderGrid();
+};
+$('vShare').onclick=()=>{const p=visible()[viewIdx];if(p)shareIds([p.id]);};
+
+/* --- gestures: swipe, double-tap zoom, pinch, pan --- */
+let zx=1,zpx=0,zpy=0,touch0=null,pinch0=null,lastTap=0;
+const stage=$('stage'), sImg=$('stageImg');
+function applyZ(){sImg.style.transform=`translate(${zpx}px,${zpy}px) scale(${zx})`;}
+function resetZoom(){zx=1;zpx=0;zpy=0;applyZ();}
+stage.addEventListener('touchstart',e=>{
+  if(e.target===sVid) return;
+  if(e.touches.length===2){const [a,b]=e.touches;pinch0={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:zx};}
+  else if(e.touches.length===1){touch0={x:e.touches[0].clientX,y:e.touches[0].clientY,px:zpx,py:zpy,t:Date.now()};}
+},{passive:true});
+stage.addEventListener('touchmove',e=>{
+  if(e.target===sVid) return;
+  if(e.touches.length===2&&pinch0){const [a,b]=e.touches;
+    zx=Math.min(5,Math.max(1,pinch0.z*Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)/pinch0.d));
+    if(zx===1){zpx=0;zpy=0;} applyZ(); e.preventDefault();}
+  else if(e.touches.length===1&&touch0&&zx>1){
+    zpx=touch0.px+(e.touches[0].clientX-touch0.x); zpy=touch0.py+(e.touches[0].clientY-touch0.y);
+    applyZ(); e.preventDefault();}
+},{passive:false});
+stage.addEventListener('touchend',e=>{
+  if(e.target===sVid) return;
+  if(pinch0){pinch0=null;return;}
+  if(!touch0) return;
+  const dx=(e.changedTouches[0].clientX-touch0.x), dy=(e.changedTouches[0].clientY-touch0.y), dt=Date.now()-touch0.t;
+  touch0=null;
+  if(zx===1&&dt<400&&Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
+    const list=visible();
+    viewIdx=dx<0?Math.min(list.length-1,viewIdx+1):Math.max(0,viewIdx-1);
+    loadView(); return;
+  }
+  if(dt<250&&Math.abs(dx)<8&&Math.abs(dy)<8){
+    const now=Date.now();
+    if(now-lastTap<300){zx=zx>1?1:2.4;zpx=0;zpy=0;applyZ();lastTap=0;}
+    else{lastTap=now;setTimeout(()=>{if(lastTap&&Date.now()-lastTap>=290){$('viewer').classList.toggle('zen');lastTap=0;}},300);}
+  }
+});
+
+/* ================= Albums ================= */
+let albumTargets=[];
+function openAlbumSheet(ids){
+  albumTargets=ids;
+  const l=$('albumList'); l.innerHTML='';
+  const opts=['',...albums()];
+  opts.forEach(a=>{
+    const b=document.createElement('button'); b.className='row';
+    b.innerHTML=`<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>${a||'No album (All only)'}`;
+    b.onclick=()=>moveTo(a); l.appendChild(b);
+  });
+  $('albumSheet').classList.add('on');
+}
+$('newAlbumBtn').onclick=()=>{
+  const name=(prompt('Album name')||'').trim();
+  if(name) moveTo(name);
+};
+async function moveTo(album){
+  for(const id of albumTargets){const p=photos.find(x=>x.id===id);if(p){p.album=album;await photoPut(p);}}
+  $('albumSheet').classList.remove('on'); exitSelect(); await refresh();
+  if(viewIdx>=0) loadView();
+  toast(album?`Moved to “${album}”`:'Removed from album');
+}
+
+/* ---------- duplicates ---------- */
+function ham(a,b){let d=0;for(let i=0;i<a.length;i++){let x=parseInt(a[i],16)^parseInt(b[i],16);while(x){d+=x&1;x>>=1;}}return d;}
+async function getThumbURL(p){
+  if(thumbURLs.has(p.id)) return thumbURLs.get(p.id);
+  const buf=await decBuf(p.thumbIv,p.thumb);
+  const u=URL.createObjectURL(new Blob([buf],{type:'image/jpeg'}));
+  thumbURLs.set(p.id,u); return u;
+}
+$('dupBtn').onclick=async()=>{
+  $('settingsSheet').classList.remove('on');
+  busy(true,'Scanning…'); let i=0;
+  for(const p of photos){
+    let changed=false;
+    if(!p.sha){try{const r=await blobGet(p.id);p.sha=await sha256(await decBuf(r.iv,r.data));changed=true;}catch(e){}}
+    if(!p.dhash&&!isVid(p)){
+      try{const buf=await decBuf(p.thumbIv,p.thumb);
+        const {img,u}=await loadImg(new Blob([buf],{type:'image/jpeg'}));
+        p.dhash=dhashFrom(img); URL.revokeObjectURL(u); changed=true;}catch(e){}
+    }
+    if(changed) await photoPut(p);
+    i++; $('busyLabel').textContent=`Scanning ${i} / ${photos.length}`;
+  }
+  const bySha=new Map();
+  photos.forEach(p=>{if(p.sha){if(!bySha.has(p.sha))bySha.set(p.sha,[]);bySha.get(p.sha).push(p);}});
+  const groups=[...bySha.values()].filter(g=>g.length>1).map(g=>({kind:'Exact duplicates',items:g}));
+  const inExact=new Set(); groups.forEach(g=>g.items.forEach(p=>inExact.add(p.id)));
+  const imgs=photos.filter(p=>p.dhash&&!inExact.has(p.id));
+  const used=new Set();
+  for(let a=0;a<imgs.length;a++){
+    if(used.has(imgs[a].id)) continue;
+    const g=[imgs[a]];
+    for(let b=a+1;b<imgs.length;b++)
+      if(!used.has(imgs[b].id)&&ham(imgs[a].dhash,imgs[b].dhash)<=6) g.push(imgs[b]);
+    if(g.length>1){g.forEach(p=>used.add(p.id));groups.push({kind:'Similar photos',items:g});}
+  }
+  busy(false);
+  renderDups(groups);
+};
+function renderDups(groups){
+  const l=$('dupList'); l.innerHTML='';
+  if(!groups.length) l.innerHTML='<div class="note">No duplicates found — every item in the vault is unique.</div>';
+  for(const g of groups){
+    const items=[...g.items].sort((x,y)=>(y.added||y.created)-(x.added||x.created)); // keep newest
+    const div=document.createElement('div'); div.className='dupgroup';
+    const th=document.createElement('div'); th.className='thumbs';
+    items.forEach(p=>{const im=document.createElement('img');getThumbURL(p).then(u=>im.src=u).catch(()=>{});th.appendChild(im);});
+    const meta=document.createElement('div'); meta.className='meta';
+    const freed=items.slice(1).reduce((s,p)=>s+(p.size||0),0);
+    const lbl=document.createElement('span'); lbl.textContent=`${g.kind} · ${items.length} items`;
+    const b=document.createElement('button'); b.textContent=`Keep newest · free ${fmtBytes(freed)}`;
+    b.onclick=async()=>{
+      if(!confirm(`Delete ${items.length-1} item${items.length>2?'s':''}, keeping the newest?`)) return;
+      for(const p of items.slice(1)){
+        await photoDel(p.id); await blobDel(p.id);
+        const u=thumbURLs.get(p.id); if(u){URL.revokeObjectURL(u);thumbURLs.delete(p.id);}
+      }
+      div.remove(); await refresh(); updateStorage(); toast('Duplicates removed');
+    };
+    meta.append(lbl,b); div.append(th,meta); l.appendChild(div);
+  }
+  $('dupSheet').classList.add('on');
+}
+
+/* ================= Settings ================= */
+$('settingsBtn').onclick=()=>{updateStorage();$('settingsSheet').classList.add('on');updateAutoLockLbl();flipLblUpd();};
+$('lockNowBtn').onclick=lock;
+document.querySelectorAll('.sheetwrap').forEach(w=>w.addEventListener('click',e=>{if(e.target===w)w.classList.remove('on');}));
+async function updateStorage(){
+  if(!navigator.storage||!navigator.storage.estimate) return;
+  const {usage=0,quota=0}=await navigator.storage.estimate();
+  $('storText').textContent=`${fmtBytes(usage)} of ${fmtBytes(quota)}`;
+  $('storBar').style.width=quota?Math.min(100,usage/quota*100)+'%':'0%';
+}
+function updateAutoLockLbl(){$('autoLockLbl').textContent=idleNames[idleChoices.indexOf(idleMs)]||'3 min';}
+$('autoLockBtn').onclick=()=>{
+  const i=(idleChoices.indexOf(idleMs)+1)%idleChoices.length;
+  idleMs=idleChoices[i]; localStorage.setItem('ledger-idle',idleMs); updateAutoLockLbl(); resetIdle();
+};
+$('changePinBtn').onclick=()=>{
+  $('settingsSheet').classList.remove('on');
+  mode='change'; pinBuf=''; setSub(); drawDots();
+  $('galleryScreen').classList.remove('on'); $('lockScreen').classList.add('on');
+};
+$('verifyBtn').onclick=async()=>{
+  busy(true,'Verifying…'); let ok=0,bad=0,i=0;
+  for(const p of photos){
+    try{const r=await blobGet(p.id);await decBuf(r.iv,r.data);await decBuf(p.thumbIv,p.thumb);ok++;}
+    catch(e){bad++;}
+    i++; $('busyLabel').textContent=`Verifying ${i} / ${photos.length}`;
+  }
+  busy(false);
+  toast(bad?`${ok} OK · ${bad} damaged — export a backup now`:`All ${ok} items verified`,3200);
+};
+
+/* ---------- backup / restore ---------- */
+$('exportBtn').onclick=async()=>{
+  busy(true,'Preparing backup…');
+  const v=await metaGet('vault');
+  const out={format:'ledger-backup',version:1,exported:Date.now(),vault:v,photos:[]};
+  let i=0;
+  for(const p of photos){
+    const r=await blobGet(p.id);
+    out.photos.push({...p,thumbIv:b2a(p.thumbIv),thumb:b2a(p.thumb),iv:b2a(r.iv),data:b2a(r.data)});
+    i++; $('busyLabel').textContent=`Packing ${i} / ${photos.length}`;
+  }
+  const blob=new Blob([JSON.stringify(out)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='vault-'+new Date().toISOString().slice(0,10)+'.ledger';
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  busy(false); toast('Backup exported — contents stay encrypted');
+};
+$('restoreBtn').onclick=()=>{
+  if(!confirm('Restoring replaces everything currently in this vault with the backup (and its passcode). Continue?')) return;
+  $('restoreInput').click();
+};
+$('restoreInput').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  busy(true,'Restoring…');
+  try{
+    const j=JSON.parse(await f.text());
+    if(j.format!=='ledger-backup') throw new Error('bad');
+    await tx('photos','readwrite',s=>s.clear());
+    await tx('blobs','readwrite',s=>s.clear());
+    await metaSet('vault',j.vault);
+    let i=0;
+    for(const p of j.photos){
+      const {iv,data,...rest}=p;
+      await photoPut({...rest,thumbIv:a2b(p.thumbIv),thumb:a2b(p.thumb)});
+      await blobPut({id:p.id,iv:a2b(iv),data:a2b(data)});
+      i++; $('busyLabel').textContent=`Restoring ${i} / ${j.photos.length}`;
+    }
+    busy(false);
+    thumbURLs.forEach(u=>URL.revokeObjectURL(u)); thumbURLs.clear();
+    toast('Restored — unlock with the backup’s passcode',3200);
+    vaultMeta=await metaGet('vault'); lock();
+  }catch(err){busy(false);toast('That file is not a valid Ledger backup');}
+};
+
+/* ================= Camera ================= */
+let camStream=null, facing='environment', shotCount=0, lastShotURL=null;
+let camMode='photo', recorder=null, recChunks=[], recStart=0, recTick=null;
+async function openCam(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('captureInput').click();return;}
+  $('camScreen').classList.add('on');
+  shotCount=0; updateBadge();
+  try{await startCam();}
+  catch(e){
+    $('camScreen').classList.remove('on');
+    if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError')) toast('Camera access was denied — allow it in Settings, or use + to import');
+    else $('captureInput').click(); // fall back to the native camera sheet
+  }
+}
+async function startCam(){
+  stopCam();
+  const constraints={audio:camMode==='video',
+    video:{facingMode:facing,width:{ideal:4096},height:{ideal:3072}}};
+  try{camStream=await navigator.mediaDevices.getUserMedia(constraints);}
+  catch(e){
+    if(camMode==='video'){ // mic denied — record without sound
+      camStream=await navigator.mediaDevices.getUserMedia({audio:false,video:constraints.video});
+      toast('Recording without sound — microphone unavailable');
+    }else throw e;
+  }
+  const v=$('camVideo'); v.srcObject=camStream;
+  v.classList.toggle('mirror',facing==='user');
+  await v.play().catch(()=>{});
+}
+function stopCam(){
+  stopRec(true);
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  $('camVideo').srcObject=null;
+}
+function closeCam(){
+  stopCam(); $('camScreen').classList.remove('on');
+  if(lastShotURL){URL.revokeObjectURL(lastShotURL);lastShotURL=null;}
+  $('camLast').innerHTML='<svg viewBox="0 0 24 24" id="camLastIcon"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9.5" cy="9.5" r="1.6"/><path d="M4 16l4.5-4.5L13 16l3-3 4 4"/></svg><span id="camBadge"></span>';
+  if(shotCount){refresh();updateStorage();toast(shotCount+(shotCount>1?' items':' item')+' saved to vault — not in camera roll');}
+}
+function updateBadge(){const b=$('camBadge');if(!b)return;b.style.display=shotCount?'flex':'none';b.textContent=shotCount;}
+function setLastShot(blob){
+  if(lastShotURL) URL.revokeObjectURL(lastShotURL);
+  lastShotURL=URL.createObjectURL(blob);
+  $('camLast').innerHTML='<img src="'+lastShotURL+'" alt=""><span id="camBadge"></span>';
+  updateBadge();
+}
+$('camFab').onclick=openCam;
+$('camClose').onclick=closeCam;
+$('camFlip').onclick=async()=>{if(recorder)return toast('Stop recording first');facing=facing==='environment'?'user':'environment';try{await startCam();}catch(e){toast('Could not switch camera');}};
+$('camModeBtn').onclick=async()=>{
+  if(recorder) return toast('Stop recording first');
+  if(camMode==='photo'&&!window.MediaRecorder) return toast('Video recording is not supported on this iOS version');
+  camMode=camMode==='photo'?'video':'photo';
+  $('camModeIcon').innerHTML=camMode==='video'
+    ?'<path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.4"/>'
+    :'<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3z"/>';
+  toast(camMode==='video'?'Video mode — tap the shutter to record (3 min max)':'Photo mode');
+  try{await startCam();}catch(e){toast('Camera error');}
+};
+$('shutterBtn').onclick=async()=>{
+  const v=$('camVideo');
+  if(!camStream||!v.videoWidth) return;
+  if(camMode==='video'){recorder?stopRec():startRec();return;}
+  $('camFlash').classList.remove('pop'); void $('camFlash').offsetWidth; $('camFlash').classList.add('pop');
+  const c=document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  c.toBlob(async b=>{
+    if(!b) return toast('Capture failed');
+    try{
+      const f=new File([b],'Capture '+new Date().toLocaleString()+'.jpg',{type:'image/jpeg'});
+      const thumbBuf=await addImage(f);
+      shotCount++; setLastShot(new Blob([thumbBuf],{type:'image/jpeg'}));
+    }catch(e){toast('Could not save capture');}
+  },'image/jpeg',.92);
+};
+function startRec(){
+  recChunks=[];
+  try{recorder=new MediaRecorder(camStream);}catch(e){recorder=null;return toast('Video recording is not supported here');}
+  recorder.ondataavailable=e=>{if(e.data&&e.data.size)recChunks.push(e.data);};
+  recorder.onstop=onRecStop;
+  recorder.start(1000);
+  recStart=Date.now();
+  $('shutterBtn').classList.add('rec'); $('recTimer').style.display='block'; $('recTimer').textContent='0:00';
+  recTick=setInterval(()=>{
+    const s=Math.floor((Date.now()-recStart)/1000);
+    $('recTimer').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+    if(s>=180) stopRec();
+  },250);
+}
+function stopRec(silent){
+  clearInterval(recTick); recTick=null;
+  $('shutterBtn').classList.remove('rec'); $('recTimer').style.display='none';
+  if(recorder&&recorder.state!=='inactive'){if(silent)recorder.onstop=null;recorder.stop();}
+  if(silent) recorder=null;
+}
+async function onRecStop(){
+  const type=(recorder&&recorder.mimeType)||'video/mp4';
+  recorder=null;
+  const blob=new Blob(recChunks,{type}); recChunks=[];
+  if(!blob.size) return toast('Recording failed');
+  busy(true,'Encrypting video…');
+  try{
+    const f=new File([blob],'Video '+new Date().toLocaleString()+'.mp4',{type});
+    const thumbBuf=await addVideo(f);
+    shotCount++; setLastShot(new Blob([thumbBuf],{type:'image/jpeg'}));
+  }catch(e){toast('Could not save video');}
+  busy(false);
+}
+$('camLast').onclick=()=>{if(shotCount)closeCam();};
+$('captureInput').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  busy(true,'Encrypting…');
+  try{
+    if((f.type||'').startsWith('video')) await addVideo(f); else await addImage(f);
+    busy(false); await refresh(); updateStorage();
+    toast('Saved to vault — not in camera roll');
+  }catch(err){busy(false);toast('Could not save capture');}
+};
+
+/* ================= Flip guard =================
+   Face-down detection via gravity on the z-axis. Modes:
+   0 = off · 1 = lock · 2 = lock + jump to Messages */
+const flipNames=['Off','Lock','Lock + Messages'];
+let flipMode=+(localStorage.getItem('ledger-flip')||0), flipTimer=null, motionOn=false;
+function flipLblUpd(){$('flipLbl').textContent=flipNames[flipMode];}
+function onMotion(e){
+  if(!masterKey||flipMode===0) return;
+  const g=e.accelerationIncludingGravity; if(!g||g.z==null) return;
+  // face-down: gravity z is strongly positive, and sustained ~450ms to avoid false triggers
+  if(g.z>7.2){
+    if(!flipTimer) flipTimer=setTimeout(()=>{
+      flipTimer=null;
+      const jump=flipMode===2;
+      lock();
+      if(jump) location.href='sms:';
+    },450);
+  }else if(flipTimer){clearTimeout(flipTimer);flipTimer=null;}
+}
+function startMotion(){
+  if(motionOn) return;
+  window.addEventListener('devicemotion',onMotion);
+  motionOn=true;
+}
+async function enableFlip(){
+  try{
+    if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
+      const r=await DeviceMotionEvent.requestPermission();
+      if(r!=='granted'){toast('Motion access denied — enable it in Settings › Safari');flipMode=0;return;}
+    }
+    startMotion();
+  }catch(e){toast('Motion sensors unavailable on this device');flipMode=0;}
+}
+$('flipBtn').onclick=async()=>{
+  flipMode=(flipMode+1)%3;
+  if(flipMode>0) await enableFlip();
+  localStorage.setItem('ledger-flip',flipMode);
+  flipLblUpd();
+  if(flipMode>0) toast(flipMode===1?'Turn the phone face-down to lock':'Face-down locks the vault and opens Messages');
+};
+
+// iOS grants motion access only from a user gesture — re-arm on first tap after unlock
+document.addEventListener('touchend',()=>{if(flipMode>0&&!motionOn&&masterKey)enableFlip();},{passive:true});
+
+/* ================= Auto-lock ================= */
+let idleT;
+function resetIdle(){clearTimeout(idleT);if(masterKey)idleT=setTimeout(lock,idleMs);}
+['touchstart','click','keydown'].forEach(ev=>document.addEventListener(ev,resetIdle,{passive:true}));
+let pickerOpen=false;
+[$('fileInput'),$('restoreInput'),$('captureInput')].forEach(inp=>{
+  inp.addEventListener('click',()=>{pickerOpen=true;});
+  inp.addEventListener('change',()=>{pickerOpen=false;});
+});
+window.addEventListener('focus',()=>setTimeout(()=>pickerOpen=false,1200));
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&masterKey&&!pickerOpen)lock();});
+window.addEventListener('pagehide',()=>{if(masterKey&&!pickerOpen)lock();});
+
+/* ================= Boot ================= */
+(async function(){
+  buildPad();
+  await openDB();
+  if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+  vaultMeta=await metaGet('vault');
+  mode=vaultMeta?'unlock':'setup';
+  setSub(); drawDots();
+})();
+</script>
+</body>
+</html>
