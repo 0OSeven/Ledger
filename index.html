@@ -1,1157 +1,1056 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'none'; worker-src 'self'; manifest-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'">
+<title>Archive</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Archive">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Ledger">
-<meta name="theme-color" content="#0D0F13">
-<title>Ledger</title>
+<meta name="theme-color" content="#12151A">
 <style>
 :root{
-  --bg:#0D0F13; --surface:#151920; --surface2:#1C222B; --line:#262D38;
-  --text:#EAE7E1; --muted:#8A929E; --accent:#C9A968; --accent-dim:#9a8250;
-  --danger:#E0655A; --ok:#7FB98A;
-  --radius:14px;
-  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
-  --display: ui-serif, "New York", Georgia, serif;
-  --body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --bg:#12151A; --surface:#1B2027; --surface2:#232A33; --line:#2E3742;
+  --text:#E6EAEE; --muted:#8A96A4; --accent:#7FB6A6; --danger:#D9707A;
+  --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
+  --ff:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overscroll-behavior:none}
-body{background:var(--bg);color:var(--text);font-family:var(--body);-webkit-font-smoothing:antialiased;
-  -webkit-user-select:none;user-select:none;touch-action:manipulation}
-button{font-family:var(--body);border:none;background:none;color:inherit;cursor:pointer}
-.screen{position:fixed;inset:0;display:none;flex-direction:column}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--ff);color:var(--text);font-size:16px;line-height:1.45;
+  -webkit-user-select:none;user-select:none;overscroll-behavior:none}
+button,input,select{font:inherit;color:inherit;background:none;border:none;outline:none}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.screen{position:fixed;inset:0;display:none;flex-direction:column;background:var(--bg)}
 .screen.on{display:flex}
 
-/* ---------- Lock / Setup ---------- */
-#lockScreen{align-items:center;justify-content:center;gap:0;background:
-  radial-gradient(120% 90% at 50% -10%, #171d27 0%, var(--bg) 60%)}
-.keyring{width:96px;height:96px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  border:1px solid var(--line);position:relative;margin-bottom:22px}
-.keyring::before{content:"";position:absolute;inset:-1px;border-radius:50%;
-  border:1px solid transparent;
-  background:conic-gradient(from 210deg, transparent 0 40%, var(--accent) 50%, transparent 60% 100%) border-box;
-  -webkit-mask:linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite:xor; mask-composite:exclude; opacity:.9}
-.keyring svg{width:34px;height:34px;stroke:var(--accent);fill:none;stroke-width:1.5}
-.keyring.open::before{animation:spin .7s ease}
-@keyframes spin{to{transform:rotate(360deg)}}
-.wordmark{font-family:var(--display);font-size:30px;letter-spacing:.06em;font-weight:500}
-.locksub{color:var(--muted);font-size:14px;margin-top:8px;min-height:20px;transition:color .2s}
-.locksub.err{color:var(--danger)}
-.pindots{display:flex;gap:14px;margin:30px 0 34px;min-height:12px}
-.pindots span{width:11px;height:11px;border-radius:50%;border:1px solid var(--muted);transition:all .15s}
-.pindots span.f{background:var(--accent);border-color:var(--accent)}
-.pindots.shake{animation:shake .4s}
-@keyframes shake{20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
-.pad{display:grid;grid-template-columns:repeat(3,76px);gap:16px 26px;justify-content:center}
-.pad button{width:76px;height:76px;border-radius:50%;font-size:28px;font-weight:300;color:var(--text);
-  background:rgba(255,255,255,.045);transition:background .12s}
-.pad button:active{background:rgba(201,169,104,.28)}
-.pad .ghost{background:none;font-size:15px;color:var(--muted)}
-.pad .ok{color:var(--accent);font-size:22px}
-@media (max-height:640px){.pad{grid-template-columns:repeat(3,64px);gap:10px 20px}.pad button{width:64px;height:64px;font-size:24px}}
+/* ---------- Lock / setup ---------- */
+#lock,#setup{align-items:center;justify-content:center;padding:0 28px calc(var(--sab) + 20px)}
+.mark{width:44px;height:44px;border:1.5px solid var(--line);border-radius:12px;position:relative;margin-bottom:22px}
+.mark::after{content:"";position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);
+  width:13px;height:13px;border:1.5px solid var(--accent);border-radius:3px}
+.ltitle{font-size:17px;font-weight:500;letter-spacing:.2px}
+.lsub{font-size:13.5px;color:var(--muted);margin-top:6px;text-align:center;max-width:280px}
+.dots{display:flex;gap:14px;margin:32px 0 26px;height:12px}
+.dot{width:11px;height:11px;border-radius:50%;border:1.4px solid var(--line);transition:background .12s,border-color .12s}
+.dot.f{background:var(--accent);border-color:var(--accent)}
+.shake{animation:sh .38s}
+@keyframes sh{15%{transform:translateX(-9px)}35%{transform:translateX(8px)}55%{transform:translateX(-6px)}75%{transform:translateX(4px)}100%{transform:translateX(0)}}
+.pad{display:grid;grid-template-columns:repeat(3,78px);gap:16px;justify-content:center}
+.key{height:70px;border-radius:50%;background:var(--surface);font-size:27px;font-weight:300;
+  display:flex;align-items:center;justify-content:center;transition:background .1s,transform .08s}
+.key:active{background:var(--surface2);transform:scale(.94)}
+.key.blank{background:none}
+.key.util{font-size:14px;color:var(--muted);background:none;font-weight:400}
+.linkbtn{color:var(--accent);font-size:14px;padding:14px 8px;margin-top:20px}
+.pwrow{display:flex;gap:10px;width:100%;max-width:330px;margin-top:26px}
+.pwrow input{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:11px;
+  padding:14px 15px;font-size:16px;-webkit-user-select:text;user-select:text}
+.pwrow button{background:var(--accent);color:#0E1114;border-radius:11px;padding:0 20px;font-weight:600;font-size:15px}
+.err{color:var(--danger);font-size:13.5px;height:18px;margin-top:14px;text-align:center}
 
 /* ---------- Gallery ---------- */
-#galleryScreen{background:var(--bg)}
-.top{padding:calc(var(--sat) + 10px) 16px 10px;display:flex;align-items:center;gap:10px;
-  position:sticky;top:0;background:linear-gradient(var(--bg) 75%, transparent);z-index:5}
-.top h1{font-family:var(--display);font-size:24px;font-weight:500;letter-spacing:.04em;flex:1}
-.iconbtn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:var(--surface);border:1px solid var(--line)}
-.iconbtn svg{width:18px;height:18px;stroke:var(--text);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.textbtn{font-size:15px;color:var(--accent);padding:8px 10px}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 16px 12px;scrollbar-width:none}
+.bar{display:flex;align-items:center;gap:6px;padding:calc(var(--sat) + 10px) 12px 10px;
+  background:rgba(18,21,26,.86);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line);position:relative;z-index:4}
+.bar h1{font-size:17px;font-weight:600;flex:1;padding-left:6px;letter-spacing:.1px}
+.ibtn{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.ibtn:active{background:var(--surface2)}
+.ibtn svg{width:21px;height:21px;stroke:var(--text);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.txtbtn{font-size:15px;color:var(--accent);padding:8px 8px}
+
+.chips{display:flex;gap:8px;padding:11px 14px;overflow-x:auto;scrollbar-width:none;
+  border-bottom:1px solid var(--line);flex-shrink:0}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:0 0 auto;padding:7px 14px;border-radius:20px;font-size:13.5px;color:var(--muted);
-  background:var(--surface);border:1px solid var(--line)}
-.chip.sel{color:#0D0F13;background:var(--accent);border-color:var(--accent);font-weight:600}
-#grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
-  align-content:start;padding-bottom:calc(var(--sab) + 96px)}
-.tile{position:relative;aspect-ratio:1;background:var(--surface);overflow:hidden}
-.tile img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-.tile .ck{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
-  border:1.5px solid rgba(255,255,255,.85);background:rgba(0,0,0,.25);display:none;align-items:center;justify-content:center}
-.selecting .tile .ck{display:flex}
-.tile.sel .ck{background:var(--accent);border-color:var(--accent)}
-.tile.sel .ck::after{content:"✓";font-size:13px;color:#0D0F13;font-weight:700}
-.tile.sel img{opacity:.55}
-.empty{grid-column:1/-1;text-align:center;padding:90px 40px;color:var(--muted)}
-.empty .keyring{margin:0 auto 20px;opacity:.7}
-.empty h2{font-family:var(--display);font-weight:500;color:var(--text);font-size:20px;margin-bottom:8px}
-.empty p{font-size:14px;line-height:1.5}
-.fabrow{position:fixed;right:20px;bottom:calc(var(--sab) + 24px);display:flex;flex-direction:column;gap:14px;z-index:6}
-.fab{width:58px;height:58px;border-radius:50%;background:var(--accent);color:#0D0F13;font-size:30px;font-weight:300;
-  display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(201,169,104,.35)}
-.fab:active{transform:scale(.94)}
-.fab.cam{background:var(--surface2);border:1px solid var(--line);box-shadow:0 8px 20px rgba(0,0,0,.4)}
-.fab.cam svg{width:24px;height:24px;stroke:var(--text);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.chip{white-space:nowrap;padding:6px 13px;border-radius:20px;background:var(--surface);
+  font-size:13.5px;color:var(--muted);border:1px solid transparent}
+.chip.on{background:var(--surface2);color:var(--text);border-color:var(--line)}
+.chip.add{color:var(--accent);background:none;border:1px dashed var(--line)}
+
+#grid{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:2px;padding:2px 2px calc(var(--sab) + 96px);align-content:start}
+@media(min-width:620px){#grid{grid-template-columns:repeat(5,1fr)}}
+.cell{position:relative;aspect-ratio:1;background:var(--surface);overflow:hidden}
+.cell img{width:100%;height:100%;object-fit:cover;display:block}
+.cell.sel img{transform:scale(.86);border-radius:8px;transition:transform .13s}
+.tick{position:absolute;right:6px;bottom:6px;width:21px;height:21px;border-radius:50%;
+  border:1.6px solid rgba(255,255,255,.85);background:rgba(0,0,0,.3);display:none}
+.cell.selmode .tick{display:block}
+.cell.sel .tick{background:var(--accent);border-color:var(--accent)}
+.cell.sel .tick::after{content:"";position:absolute;left:6px;top:2.5px;width:5px;height:10px;
+  border:solid #0E1114;border-width:0 2px 2px 0;transform:rotate(43deg)}
+
+.empty{grid-column:1/-1;text-align:center;padding:88px 30px;color:var(--muted);font-size:14.5px;line-height:1.7}
+.empty b{display:block;color:var(--text);font-size:16px;font-weight:500;margin-bottom:8px}
+
+.fabs{position:fixed;right:18px;bottom:calc(var(--sab) + 20px);display:flex;flex-direction:column;gap:13px;z-index:6}
+.fab{width:56px;height:56px;border-radius:50%;background:var(--accent);color:#0E1114;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(0,0,0,.45)}
+.fab:active{transform:scale(.93)}
+.fab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fab.alt{background:var(--surface2);color:var(--text);border:1px solid var(--line)}
+
+/* ---------- Sheets ---------- */
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:none}
+.veil.on{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);
+  border-radius:20px 20px 0 0;padding:8px 0 calc(var(--sab) + 10px);transform:translateY(110%);
+  transition:transform .22s cubic-bezier(.32,.72,0,1);max-height:88vh;overflow-y:auto}
+.sheet.on{transform:translateY(0)}
+.grab{width:36px;height:4px;background:var(--line);border-radius:2px;margin:6px auto 12px}
+.sh{font-size:12.5px;color:var(--muted);padding:14px 20px 7px}
+.row{display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid var(--line)}
+.row:active{background:var(--surface2)}
+.row .g{flex:1;min-width:0}
+.row .t{font-size:15.5px}
+.row .d{font-size:12.5px;color:var(--muted);margin-top:2px}
+.row.dz{color:var(--danger)}
+.row select{background:var(--surface2);border-radius:8px;padding:7px 10px;font-size:14px}
+.sw{width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;flex-shrink:0;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+  background:#fff;transition:transform .15s}
+.sw.on{background:var(--accent)}
+.sw.on::after{transform:translateX(18px)}
+.prompt{padding:20px}
+.prompt input{width:100%;background:var(--surface2);border:1px solid var(--line);border-radius:11px;
+  padding:13px 14px;font-size:16px;-webkit-user-select:text;user-select:text}
+.prompt .btns{display:flex;gap:10px;margin-top:14px}
+.prompt .btns button{flex:1;padding:13px;border-radius:11px;background:var(--surface2);font-size:15px}
+.prompt .btns .go{background:var(--accent);color:#0E1114;font-weight:600}
+.prompt .btns .go.dz{background:var(--danger);color:#fff}
+.prompt p{font-size:13.5px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.prompt h3{font-size:16.5px;margin-bottom:10px;font-weight:600}
 
 /* ---------- Camera ---------- */
-#camScreen{background:#000;z-index:15}
-#camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-#camVideo.mirror{transform:scaleX(-1)}
-.camtop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
-  padding:calc(var(--sat) + 12px) 16px 0;z-index:3}
+#cam{background:#000;z-index:15}
+#video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+#video.mir{transform:scaleX(-1)}
+.camtop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;
+  padding:calc(var(--sat) + 10px) 16px 0;z-index:3}
 .cambot{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;
-  padding:20px 34px calc(var(--sab) + 26px);z-index:3;background:linear-gradient(transparent,rgba(0,0,0,.45))}
-.shutter{width:74px;height:74px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);
-  transition:transform .1s}
-.shutter:active{transform:scale(.88);background:#fff}
-.camside{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);
-  display:flex;align-items:center;justify-content:center;overflow:hidden}
-.camside svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-.camside img{width:100%;height:100%;object-fit:cover}
-#camFlash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:2}
-#camFlash.pop{animation:pop .28s ease}
-@keyframes pop{15%{opacity:.85}100%{opacity:0}}
-#camBadge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--accent);
-  color:#0D0F13;font-size:11.5px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 5px}
-.selbar{position:fixed;left:0;right:0;bottom:0;padding:12px 20px calc(var(--sab) + 14px);
-  background:rgba(21,25,32,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);
-  display:none;justify-content:space-around;z-index:7}
-.selecting .selbar{display:flex}
-.selecting .fabrow{display:none}
-.selbar button{font-size:15px;padding:8px 14px;color:var(--text)}
-.selbar .del{color:var(--danger)}
-.count{font-size:13px;color:var(--muted);padding:0 16px 8px}
+  padding:22px 30px calc(var(--sab) + 24px);z-index:3;background:linear-gradient(transparent,rgba(0,0,0,.5))}
+.shutter{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.22);transition:transform .09s,background .09s}
+.shutter:active{transform:scale(.87);background:#fff}
+.cside{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.14);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.cside svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.cside img{width:100%;height:100%;object-fit:cover}
+.pill{background:rgba(0,0,0,.45);border-radius:16px;padding:6px 13px;font-size:13px;color:#fff}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
+.flash.go{animation:fl .3s}
+@keyframes fl{0%{opacity:.85}100%{opacity:0}}
 
 /* ---------- Viewer ---------- */
-#viewer{background:#000;z-index:20}
-#viewer .vtop,#viewer .vbot{position:absolute;left:0;right:0;display:flex;align-items:center;z-index:3;
-  transition:opacity .2s}
-#viewer .vtop{top:0;padding:calc(var(--sat) + 10px) 16px 14px;gap:12px;
-  background:linear-gradient(rgba(0,0,0,.6),transparent)}
-#viewer .vbot{bottom:0;padding:14px 16px calc(var(--sab) + 14px);justify-content:space-between;
-  background:linear-gradient(transparent,rgba(0,0,0,.6))}
-#viewer.zen .vtop,#viewer.zen .vbot{opacity:0;pointer-events:none}
-.vmeta{flex:1;min-width:0}
-.vmeta b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vmeta span{font-size:12px;color:var(--muted)}
-#stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
-#stage img{max-width:100%;max-height:100%;transform-origin:center;will-change:transform}
+#viewer{background:#000;z-index:18}
+#slides{position:absolute;inset:0;display:flex;transition:transform .26s cubic-bezier(.32,.72,0,1);will-change:transform}
+.slide{flex:0 0 100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center center}
+.vtop,.vbot{position:absolute;left:0;right:0;z-index:3;display:flex;align-items:center;
+  transition:opacity .2s;background:rgba(0,0,0,.42);backdrop-filter:blur(10px)}
+.vtop{top:0;padding:calc(var(--sat) + 8px) 12px 8px;justify-content:space-between}
+.vbot{bottom:0;padding:12px 26px calc(var(--sab) + 14px);justify-content:space-around}
+.vhide .vtop,.vhide .vbot{opacity:0;pointer-events:none}
+.vbot .ibtn svg,.vtop .ibtn svg{stroke:#fff}
+.vmeta{font-size:12.5px;color:rgba(255,255,255,.75)}
 
-/* ---------- Sheets / modals ---------- */
-.sheetwrap{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30;display:none;align-items:flex-end}
-.sheetwrap.on{display:flex}
-.sheet{width:100%;background:var(--surface);border-radius:18px 18px 0 0;padding:10px 18px calc(var(--sab) + 18px);
-  max-height:82vh;overflow-y:auto;animation:up .22s ease}
-@keyframes up{from{transform:translateY(40px);opacity:.5}}
-.grab{width:36px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 14px}
-.sheet h3{font-family:var(--display);font-weight:500;font-size:19px;margin-bottom:14px}
-.row{display:flex;align-items:center;gap:12px;width:100%;padding:15px 2px;border-bottom:1px solid var(--line);
-  font-size:15.5px;text-align:left;color:var(--text)}
-.row:last-child{border-bottom:none}
-.row svg{width:19px;height:19px;stroke:var(--accent);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.row .sub{margin-left:auto;color:var(--muted);font-size:13.5px;text-align:right}
-.row.danger, .row.danger svg{color:var(--danger);stroke:var(--danger)}
-.meter{height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:8px}
-.meter i{display:block;height:100%;background:var(--accent);border-radius:3px}
-.note{font-size:12.5px;color:var(--muted);line-height:1.55;padding:12px 2px 2px}
-
-/* ---------- Toast & progress ---------- */
-#toast{position:fixed;left:50%;bottom:calc(var(--sab) + 100px);transform:translateX(-50%) translateY(12px);
-  background:var(--surface2);border:1px solid var(--line);color:var(--text);font-size:14px;
-  padding:11px 18px;border-radius:24px;opacity:0;transition:all .25s;z-index:60;pointer-events:none;
-  max-width:86vw;text-align:center}
-#toast.on{opacity:1;transform:translateX(-50%)}
-#busy{position:fixed;inset:0;background:rgba(13,15,19,.85);backdrop-filter:blur(6px);z-index:50;
-  display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+/* ---------- misc ---------- */
+#cover{position:fixed;inset:0;z-index:60;background:var(--bg);display:none;
+  align-items:center;justify-content:center}
+#cover.on{display:flex}
+#toast{position:fixed;left:50%;bottom:calc(var(--sab) + 96px);transform:translate(-50%,20px);
+  background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:11px 17px;
+  font-size:14px;z-index:50;opacity:0;pointer-events:none;transition:all .2s;max-width:86vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#busy{position:fixed;inset:0;z-index:55;background:rgba(18,21,26,.9);display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:16px}
 #busy.on{display:flex}
-#busy .spin{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);
-  animation:rot .8s linear infinite}
-@keyframes rot{to{transform:rotate(360deg)}}
-#busyLabel{font-size:14px;color:var(--muted)}
-.chipdiv{flex:0 0 1px;align-self:stretch;background:var(--line);margin:4px 3px}
-.tile .dur{position:absolute;right:5px;bottom:4px;font-size:10.5px;background:rgba(0,0,0,.55);padding:1px 6px;border-radius:6px;color:#fff}
-.tile .fv{position:absolute;left:6px;bottom:4px;font-size:12px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.75)}
-.selbar button{font-size:14px;padding:8px 6px}
-#recTimer{position:absolute;top:calc(var(--sat) + 64px);left:50%;transform:translateX(-50%);background:rgba(224,101,90,.92);
-  color:#fff;font-size:13px;font-weight:600;padding:4px 13px;border-radius:14px;display:none;z-index:3}
-.shutter.rec{border-color:var(--danger);background:rgba(224,101,90,.55)}
-.camside.mode svg{stroke:var(--accent)}
-.dupgroup{border-bottom:1px solid var(--line);padding:13px 0}
-.dupgroup:last-child{border-bottom:none}
-.dupgroup .thumbs{display:flex;gap:6px;overflow-x:auto;margin-bottom:9px;scrollbar-width:none}
-.dupgroup .thumbs::-webkit-scrollbar{display:none}
-.dupgroup .thumbs img{width:58px;height:58px;object-fit:cover;border-radius:9px;background:var(--surface2);flex:0 0 auto}
-.dupgroup .meta{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:var(--muted);gap:10px}
-.dupgroup .meta button{color:var(--danger);font-size:13.5px;flex-shrink:0}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.spin{width:30px;height:30px;border:2.5px solid var(--line);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#busyTxt{font-size:14px;color:var(--muted)}
+.hidden{display:none!important}
 </style>
 </head>
 <body>
 
-<!-- ============ LOCK / SETUP ============ -->
-<div class="screen on" id="lockScreen">
-  <div class="keyring" id="keyring">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="9.5" r="3.2"/><path d="M12 12.7 L10.4 18.5 h3.2 Z"/></svg>
+<!-- ============ SETUP ============ -->
+<div class="screen" id="setup">
+  <div class="mark"></div>
+  <div class="ltitle" id="suTitle">Choose a passcode</div>
+  <div class="lsub" id="suSub">Six digits or more. It's never stored anywhere — if you forget it, the photos can't be recovered.</div>
+  <div class="dots" id="suDots"></div>
+  <div class="err" id="suErr"></div>
+  <div class="pad" id="suPad"></div>
+  <div class="pwrow hidden" id="suPw">
+    <input type="password" id="suPwIn" placeholder="Passphrase" autocomplete="new-password" autocapitalize="off" spellcheck="false">
+    <button id="suPwGo">Next</button>
   </div>
-  <div class="wordmark">Ledger</div>
-  <div class="locksub" id="lockSub">Enter passcode</div>
-  <div class="pindots" id="pinDots"></div>
-  <div class="pad" id="pad"></div>
+  <button class="linkbtn" id="suToggle">Use a passphrase instead</button>
+</div>
+
+<!-- ============ LOCK ============ -->
+<div class="screen" id="lock">
+  <div class="mark"></div>
+  <div class="ltitle">Enter passcode</div>
+  <div class="dots" id="lkDots"></div>
+  <div class="err" id="lkErr"></div>
+  <div class="pad" id="lkPad"></div>
+  <div class="pwrow hidden" id="lkPw">
+    <input type="password" id="lkPwIn" placeholder="Passphrase" autocomplete="current-password" autocapitalize="off" spellcheck="false">
+    <button id="lkPwGo">Unlock</button>
+  </div>
+  <button class="linkbtn" id="lkRestore">Restore from a backup file</button>
 </div>
 
 <!-- ============ GALLERY ============ -->
-<div class="screen" id="galleryScreen">
-  <div class="top">
-    <h1 id="titleH">Ledger</h1>
-    <button class="textbtn" id="selectBtn">Select</button>
-    <button class="iconbtn" id="settingsBtn" aria-label="Settings">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>
-    </button>
-    <button class="iconbtn" id="lockNowBtn" aria-label="Lock">
-      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-    </button>
+<div class="screen" id="app">
+  <div class="bar">
+    <h1 id="title">Archive</h1>
+    <button class="txtbtn hidden" id="selCancel">Done</button>
+    <button class="ibtn" id="btnSelect" aria-label="Select photos"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></button>
+    <button class="ibtn" id="btnSettings" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.6 1.6 0 008 19.4a1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H2a2 2 0 110-4h.1A1.6 1.6 0 004.6 8a1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V2a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H22a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/></svg></button>
+    <button class="ibtn" id="btnLock" aria-label="Lock now"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></button>
   </div>
   <div class="chips" id="chips"></div>
-  <div class="count" id="countLbl"></div>
   <div id="grid"></div>
-  <div class="fabrow">
-    <button class="fab cam" id="camFab" aria-label="Take photo">
-      <svg viewBox="0 0 24 24"><path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.4"/></svg>
-    </button>
-    <button class="fab" id="fab" aria-label="Add photos">+</button>
+  <div class="fabs" id="fabs">
+    <button class="fab alt" id="btnImport" aria-label="Add from files"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="fab" id="btnCam" aria-label="Take a photo"><svg viewBox="0 0 24 24"><path d="M3 8.5A1.5 1.5 0 014.5 7h2.2a1 1 0 00.8-.4l1-1.3a1 1 0 01.8-.4h5.4a1 1 0 01.8.4l1 1.3a1 1 0 00.8.4h2.2A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.4"/></svg></button>
   </div>
-  <div class="selbar">
-    <button id="selAll">All</button>
-    <button id="selFav">♥ Fav</button>
-    <button id="selMove">Move</button>
-    <button id="selShare">Share</button>
-    <button class="del" id="selDelete">Delete</button>
+  <div class="fabs hidden" id="selFabs" style="flex-direction:row">
+    <button class="fab alt" id="btnMove" aria-label="Move to album"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></button>
+    <button class="fab alt" id="btnDel" style="color:var(--danger)" aria-label="Delete selected"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg></button>
   </div>
-  <input type="file" id="fileInput" accept="image/*,video/*" multiple hidden>
-  <input type="file" id="captureInput" accept="image/*" capture="environment" hidden>
-  <input type="file" id="restoreInput" accept=".ledger,application/json" hidden>
 </div>
 
 <!-- ============ CAMERA ============ -->
-<div class="screen" id="camScreen">
-  <video id="camVideo" autoplay playsinline muted></video>
-  <div id="camFlash"></div>
-  <div id="recTimer">0:00</div>
+<div class="screen" id="cam">
+  <video id="video" playsinline autoplay muted></video>
+  <div class="flash" id="flash"></div>
   <div class="camtop">
-    <button class="iconbtn" id="camClose" aria-label="Close camera">
-      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-    <button class="iconbtn" id="camFlip" aria-label="Flip camera">
-      <svg viewBox="0 0 24 24"><path d="M4 9a8 8 0 0 1 14-3l2 2M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M20 4v4h-4M4 20v-4h4"/></svg>
-    </button>
+    <button class="cside" id="camClose" aria-label="Close camera"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="pill" id="camCount">0 saved</div>
+    <button class="cside" id="camTorch" aria-label="Toggle light"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13H11l-1 9 8.5-11H12z"/></svg></button>
   </div>
   <div class="cambot">
-    <div class="camside" id="camLast" style="position:relative">
-      <svg viewBox="0 0 24 24" id="camLastIcon"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9.5" cy="9.5" r="1.6"/><path d="M4 16l4.5-4.5L13 16l3-3 4 4"/></svg>
-      <span id="camBadge"></span>
-    </div>
-    <button class="shutter" id="shutterBtn" aria-label="Take photo"></button>
-    <button class="camside" id="camModeBtn" aria-label="Switch photo/video">
-      <svg viewBox="0 0 24 24" id="camModeIcon"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3z"/></svg>
-    </button>
+    <div class="cside" id="camLast"></div>
+    <button class="shutter" id="camShot" aria-label="Take photo"></button>
+    <button class="cside" id="camFlip" aria-label="Switch camera"><svg viewBox="0 0 24 24"><path d="M17 3l3 3-3 3"/><path d="M20 6H8a4 4 0 00-4 4v1"/><path d="M7 21l-3-3 3-3"/><path d="M4 18h12a4 4 0 004-4v-1"/></svg></button>
   </div>
 </div>
 
 <!-- ============ VIEWER ============ -->
 <div class="screen" id="viewer">
-  <div id="stage"><img id="stageImg" alt=""><video id="stageVid" playsinline controls style="max-width:100%;max-height:100%;display:none"></video></div>
+  <div id="slides"></div>
   <div class="vtop">
-    <button class="iconbtn" id="vClose" aria-label="Close">
-      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-    <div class="vmeta"><b id="vName"></b><span id="vDate"></span></div>
+    <button class="ibtn" id="vClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="vmeta" id="vMeta"></div>
+    <div style="width:38px"></div>
   </div>
   <div class="vbot">
-    <button class="textbtn" id="vFav" style="font-size:20px">♡</button>
-    <button class="textbtn" id="vAlbum">Move</button>
-    <button class="textbtn" id="vShare">Share</button>
-    <button class="textbtn" style="color:var(--danger)" id="vDelete">Delete</button>
+    <button class="ibtn" id="vMove" aria-label="Move to album"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></button>
+    <button class="ibtn" id="vInfo" aria-label="Details"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button>
+    <button class="ibtn" id="vDel" aria-label="Delete"><svg viewBox="0 0 24 24" style="stroke:var(--danger)"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg></button>
   </div>
 </div>
 
-<!-- ============ SETTINGS SHEET ============ -->
-<div class="sheetwrap" id="settingsSheet">
-  <div class="sheet">
-    <div class="grab"></div>
-    <h3>Settings</h3>
-    <div class="row" style="display:block">
-      <div style="display:flex;justify-content:space-between;font-size:14px">
-        <span>Storage used</span><span class="sub" id="storText">–</span>
-      </div>
-      <div class="meter"><i id="storBar" style="width:0%"></i></div>
-    </div>
-    <button class="row" id="exportBtn">
-      <svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
-      Export encrypted backup<span class="sub">.ledger file</span>
-    </button>
-    <button class="row" id="restoreBtn">
-      <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-      Restore from backup
-    </button>
-    <button class="row" id="dupBtn">
-      <svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
-      Find duplicates
-    </button>
-    <button class="row" id="verifyBtn">
-      <svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
-      Verify vault integrity
-    </button>
-    <button class="row" id="changePinBtn">
-      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      Change passcode
-    </button>
-    <button class="row" id="flipBtn">
-      <svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M3 12h2M19 12h2"/></svg>
-      Flip face-down<span class="sub" id="flipLbl">Off</span>
-    </button>
-    <button class="row" id="autoLockBtn">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-      Auto-lock<span class="sub" id="autoLockLbl">3 min</span>
-    </button>
-    <div class="note">Everything is encrypted with your passcode and stored only on this device. There is no recovery if the passcode is forgotten — keep an exported backup somewhere safe. Tip: after importing photos here, delete the originals from the Photos app (including Recently Deleted).</div>
-  </div>
-</div>
-
-<!-- ============ ALBUM SHEET ============ -->
-<div class="sheetwrap" id="albumSheet">
-  <div class="sheet">
-    <div class="grab"></div>
-    <h3>Move to album</h3>
-    <div id="albumList"></div>
-    <button class="row" id="newAlbumBtn">
-      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New album
-    </button>
-  </div>
-</div>
-
-<!-- ============ DUPLICATES SHEET ============ -->
-<div class="sheetwrap" id="dupSheet">
-  <div class="sheet">
-    <div class="grab"></div>
-    <h3>Duplicates</h3>
-    <div id="dupList"></div>
-  </div>
-</div>
-
+<div id="cover"><div class="mark" style="margin:0"></div></div>
+<div class="veil" id="veil"></div>
+<div class="sheet" id="sheet"><div class="grab"></div><div id="sheetBody"></div></div>
 <div id="toast"></div>
-<div id="busy"><div class="spin"></div><div id="busyLabel">Working…</div></div>
+<div id="busy"><div class="spin"></div><div id="busyTxt">Working…</div></div>
+<input type="file" id="filePick" accept="image/*" multiple class="hidden">
+<input type="file" id="backupPick" accept=".vault,application/octet-stream" class="hidden">
 
 <script>
-/* ================= Utilities ================= */
-const $=id=>document.getElementById(id);
-const enc=new TextEncoder(), dec=new TextDecoder();
-function b2a(buf){let s='';const b=new Uint8Array(buf);for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s);}
-function a2b(str){const s=atob(str),b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b.buffer;}
-function toast(m,ms=2200){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),ms);}
-function busy(on,label){$('busy').classList.toggle('on',!!on);if(label)$('busyLabel').textContent=label;}
-function fmtBytes(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(0)+' KB';if(n<1073741824)return (n/1048576).toFixed(1)+' MB';return (n/1073741824).toFixed(2)+' GB';}
-function fmtDate(ts){return new Date(ts).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})+' · '+new Date(ts).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}
+"use strict";
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const te = new TextEncoder(), tdec = new TextDecoder();
+const rnd = n => crypto.getRandomValues(new Uint8Array(n));
+const uid = () => Date.now().toString(36) + '-' + [...rnd(6)].map(b => b.toString(16).padStart(2,'0')).join('');
+const ITERS = 650000;
 
-/* ================= IndexedDB ================= */
+let MK = null;                 // master CryptoKey (memory only)
+let MKRAW = null;              // raw key bytes, kept only while unlocked, used to rewrap on passcode change
+let items = [], albums = [], curAlbum = 'all';
+let settings = { autolock: 60, strip: true };
+let urlCache = new Map(), selMode = false, sel = new Set();
+let hiddenAt = 0, idleTimer = null;
+
+/* ---------------- IndexedDB ---------------- */
 let db;
-function openDB(){return new Promise((res,rej)=>{
-  const r=indexedDB.open('ledger-vault',1);
-  r.onupgradeneeded=e=>{const d=e.target.result;
-    d.createObjectStore('meta');
-    d.createObjectStore('photos',{keyPath:'id'});
-    d.createObjectStore('blobs',{keyPath:'id'});};
-  r.onsuccess=()=>{db=r.result;res();};
-  r.onerror=()=>rej(r.error);
-});}
-function tx(store,mode,fn){return new Promise((res,rej)=>{
-  const t=db.transaction(store,mode),s=t.objectStore(store);let out;
-  const req=fn(s); if(req) req.onsuccess=()=>out=req.result;
-  t.oncomplete=()=>res(out); t.onerror=()=>rej(t.error);
-});}
-const metaGet=k=>tx('meta','readonly',s=>s.get(k));
-const metaSet=(k,v)=>tx('meta','readwrite',s=>s.put(v,k));
-const photosAll=()=>tx('photos','readonly',s=>s.getAll());
-const photoPut=p=>tx('photos','readwrite',s=>s.put(p));
-const photoDel=id=>tx('photos','readwrite',s=>s.delete(id));
-const blobGet=id=>tx('blobs','readonly',s=>s.get(id));
-const blobPut=b=>tx('blobs','readwrite',s=>s.put(b));
-const blobDel=id=>tx('blobs','readwrite',s=>s.delete(id));
+function openDB(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('archive_store', 1);
+    r.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('meta'))   d.createObjectStore('meta', { keyPath:'k' });
+      if (!d.objectStoreNames.contains('items'))  d.createObjectStore('items', { keyPath:'id' });
+      if (!d.objectStoreNames.contains('albums')) d.createObjectStore('albums', { keyPath:'id' });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+const req = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const store = (n, m='readonly') => db.transaction(n, m).objectStore(n);
+const dbGet  = (s, k) => req(store(s).get(k));
+const dbAll  = s => req(store(s).getAll());
+const dbPut  = (s, v) => req(store(s, 'readwrite').put(v));
+const dbDel  = (s, k) => req(store(s, 'readwrite').delete(k));
+const dbClear= s => req(store(s, 'readwrite').clear());
 
-/* ================= Crypto =================
-   PIN --PBKDF2--> wrapping key --unwraps--> master AES-256-GCM key.
-   Changing the PIN only re-wraps the master key. */
-const ITER=310000;
-let masterKey=null; // in memory only while unlocked
-async function pinKey(pin,salt){
-  const km=await crypto.subtle.importKey('raw',enc.encode(pin),'PBKDF2',false,['deriveKey']);
-  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:ITER,hash:'SHA-256'},km,
-    {name:'AES-GCM',length:256},false,['wrapKey','unwrapKey']);
+/* ---------------- Crypto ---------------- */
+async function kek(pass, salt, iters){
+  const base = await crypto.subtle.importKey('raw', te.encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name:'PBKDF2', salt, iterations:iters, hash:'SHA-256' },
+    base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
 }
-async function createVault(pin){
-  const salt=crypto.getRandomValues(new Uint8Array(16));
-  const wrapIv=crypto.getRandomValues(new Uint8Array(12));
-  const wk=await pinKey(pin,salt);
-  const mk=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
-  const wrapped=await crypto.subtle.wrapKey('raw',mk,wk,{name:'AES-GCM',iv:wrapIv});
-  await metaSet('vault',{salt:b2a(salt),wrapIv:b2a(wrapIv),wrapped:b2a(wrapped),pinLen:pin.length,created:Date.now()});
-  masterKey=mk;
+async function enc(buf, key = MK){
+  const iv = rnd(12);
+  const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, buf);
+  return { iv, ct };
 }
-async function unlockVault(pin){
-  const v=await metaGet('vault'); if(!v) return false;
-  try{
-    const wk=await pinKey(pin,new Uint8Array(a2b(v.salt)));
-    masterKey=await crypto.subtle.unwrapKey('raw',new Uint8Array(a2b(v.wrapped)),wk,
-      {name:'AES-GCM',iv:new Uint8Array(a2b(v.wrapIv))},{name:'AES-GCM',length:256},true,['encrypt','decrypt']);
-    return true;
-  }catch(e){return false;}
+const dec = (iv, ct, key = MK) =>
+  crypto.subtle.decrypt({ name:'AES-GCM', iv:new Uint8Array(iv) }, key, ct);
+
+async function createVault(pass){
+  const raw = rnd(32), salt = rnd(16);
+  const k = await kek(pass, salt, ITERS);
+  const w = await enc(raw.buffer, k);
+  await dbPut('meta', { k:'vault', salt, iters:ITERS, wiv:w.iv, wct:w.ct });
+  await dbPut('meta', { k:'settings', v:settings });
+  MKRAW = raw.slice(0);
+  MK = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt','decrypt']);
 }
-async function rewrapPin(newPin){
-  const v=await metaGet('vault');
-  const salt=crypto.getRandomValues(new Uint8Array(16));
-  const wrapIv=crypto.getRandomValues(new Uint8Array(12));
-  const wk=await pinKey(newPin,salt);
-  const wrapped=await crypto.subtle.wrapKey('raw',masterKey,wk,{name:'AES-GCM',iv:wrapIv});
-  await metaSet('vault',{...v,salt:b2a(salt),wrapIv:b2a(wrapIv),wrapped:b2a(wrapped),pinLen:newPin.length});
-}
-async function encBuf(buf){
-  const iv=crypto.getRandomValues(new Uint8Array(12));
-  const data=await crypto.subtle.encrypt({name:'AES-GCM',iv},masterKey,buf);
-  return {iv:iv.buffer,data};
-}
-async function decBuf(iv,data){
-  return crypto.subtle.decrypt({name:'AES-GCM',iv:new Uint8Array(iv)},masterKey,data);
+async function unlock(pass){
+  const m = await dbGet('meta', 'vault');
+  const k = await kek(pass, m.salt, m.iters);
+  const raw = new Uint8Array(await dec(m.wiv, m.wct, k)); // throws if the passcode is wrong
+  MKRAW = raw.slice(0);
+  MK = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt','decrypt']);
 }
 
-/* ================= Lock screen ================= */
-let pinBuf='', mode='unlock', firstPin='', vaultMeta=null;
-const idleChoices=[60000,180000,300000,600000], idleNames=['1 min','3 min','5 min','10 min'];
-let idleMs=+(localStorage.getItem('ledger-idle')||180000);
-
-function buildPad(){
-  const pad=$('pad'); pad.innerHTML='';
-  [1,2,3,4,5,6,7,8,9].forEach(n=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>key(n);pad.appendChild(b);});
-  const g=document.createElement('button');g.className='ghost';g.id='padLeft';pad.appendChild(g);
-  const z=document.createElement('button');z.textContent='0';z.onclick=()=>key(0);pad.appendChild(z);
-  const ok=document.createElement('button');ok.className='ok';ok.textContent='✓';ok.onclick=confirmPin;pad.appendChild(ok);
-  g.onclick=()=>{pinBuf=pinBuf.slice(0,-1);drawDots();};
-  g.textContent='⌫';
-}
-function drawDots(){
-  const d=$('pinDots'); d.innerHTML='';
-  const len=Math.max(pinBuf.length, mode==='unlock'&&vaultMeta?vaultMeta.pinLen:pinBuf.length||0);
-  const shown=mode==='unlock'&&vaultMeta?vaultMeta.pinLen:Math.max(4,pinBuf.length);
-  for(let i=0;i<shown;i++){const s=document.createElement('span');if(i<pinBuf.length)s.className='f';d.appendChild(s);}
-}
-function key(n){
-  if(pinBuf.length>=8) return;
-  pinBuf+=n; drawDots();
-  if(mode==='unlock'&&vaultMeta&&pinBuf.length===vaultMeta.pinLen) confirmPin();
-}
-function shake(msg){
-  $('lockSub').textContent=msg; $('lockSub').classList.add('err');
-  $('pinDots').classList.add('shake');
-  setTimeout(()=>{$('pinDots').classList.remove('shake');pinBuf='';drawDots();},420);
-  setTimeout(()=>{$('lockSub').classList.remove('err');setSub();},1600);
-}
-function setSub(){
-  $('lockSub').textContent = mode==='unlock'?'Enter passcode'
-    : mode==='setup'?'Create a passcode (4–8 digits)'
-    : mode==='setup2'?'Re-enter to confirm'
-    : mode==='change'?'New passcode (4–8 digits)'
-    : 'Re-enter to confirm';
-}
-async function confirmPin(){
-  if(mode==='unlock'){
-    if(!pinBuf.length) return;
-    busy(true,'Unlocking…');
-    const ok=await unlockVault(pinBuf); busy(false);
-    if(ok){$('keyring').classList.add('open');pinBuf='';setTimeout(()=>{$('keyring').classList.remove('open');showGallery();},350);}
-    else shake('Wrong passcode');
-  }else if(mode==='setup'||mode==='change'){
-    if(pinBuf.length<4){shake('Use at least 4 digits');return;}
-    firstPin=pinBuf; pinBuf=''; mode=mode==='setup'?'setup2':'change2'; setSub(); drawDots();
-  }else{ // confirm step
-    if(pinBuf!==firstPin){pinBuf='';mode=mode==='setup2'?'setup':'change';shake("Didn't match — start over");return;}
-    busy(true,'Securing…');
-    if(mode==='setup2'){await createVault(firstPin);vaultMeta=await metaGet('vault');busy(false);showGallery();toast('Vault created');}
-    else{await rewrapPin(firstPin);vaultMeta=await metaGet('vault');busy(false);$('settingsSheet').classList.remove('on');showGallery();toast('Passcode changed');}
-    pinBuf=''; firstPin='';
+/* ---------------- Image helpers ---------------- */
+async function toBitmap(blob){
+  try { return await createImageBitmap(blob, { imageOrientation:'from-image' }); }
+  catch(e){
+    const url = URL.createObjectURL(blob);
+    try {
+      return await new Promise((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i); i.onerror = () => rej(new Error('decode'));
+        i.src = url;
+      });
+    } finally { setTimeout(() => URL.revokeObjectURL(url), 4000); }
   }
 }
-function lock(){
-  masterKey=null; pinBuf=''; mode='unlock'; setSub(); drawDots();
-  closeViewer(true); exitSelect();
-  try{stopCam();}catch(e){} $('camScreen').classList.remove('on');
-  document.querySelectorAll('#grid img,#stageImg').forEach(i=>{if(i.src.startsWith('blob:'))URL.revokeObjectURL(i.src);i.removeAttribute('src');});
-  $('grid').innerHTML='';
-  $('galleryScreen').classList.remove('on'); $('viewer').classList.remove('on');
-  document.querySelectorAll('.sheetwrap').forEach(s=>s.classList.remove('on'));
-  $('lockScreen').classList.add('on');
+function reencode(src, max, q){
+  const w = src.width || src.naturalWidth, h = src.height || src.naturalHeight;
+  const s = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  return new Promise(r => c.toBlob(r, 'image/jpeg', q));
 }
+async function addPhoto(blob, album){
+  const bm = await toBitmap(blob);
+  let full = blob, type = blob.type || 'image/jpeg';
+  if (settings.strip || !/^image\/(jpeg|png|webp)$/.test(type)){
+    full = await reencode(bm, 3200, 0.92); type = 'image/jpeg';
+  }
+  const thumb = await reencode(bm, 400, 0.72);
+  const [fb, tb] = await Promise.all([full.arrayBuffer(), thumb.arrayBuffer()]);
+  const a = await enc(fb), b = await enc(tb);
+  const rec = { id:uid(), album:album ?? null, ts:Date.now(), type,
+                w:bm.width || bm.naturalWidth, h:bm.height || bm.naturalHeight,
+                size:fb.byteLength, iv:a.iv, ct:a.ct, tiv:b.iv, tct:b.ct };
+  await dbPut('items', rec);
+  if (bm.close) bm.close();
+  items.unshift(stripHeavy(rec));
+  return rec;
+}
+const stripHeavy = r => ({ id:r.id, album:r.album, ts:r.ts, type:r.type, w:r.w, h:r.h, size:r.size });
 
-/* ================= Gallery ================= */
-let photos=[], curAlbum='__all', selecting=false, selected=new Set(), viewIdx=-1, thumbURLs=new Map();
-
-async function showGallery(){
-  $('lockScreen').classList.remove('on');
-  $('galleryScreen').classList.add('on');
-  await refresh();
-  updateStorage();
+async function thumbURL(id){
+  if (urlCache.has(id)) return urlCache.get(id);
+  const r = await dbGet('items', id);
+  if (!r) return null;
+  const buf = await dec(r.tiv, r.tct);
+  const url = URL.createObjectURL(new Blob([buf], { type:'image/jpeg' }));
+  urlCache.set(id, url);
+  return url;
 }
-async function refresh(){
-  photos=(await photosAll()).sort((a,b)=>b.created-a.created);
-  renderChips(); renderGrid();
+async function fullURL(id){
+  const key = 'F' + id;
+  if (urlCache.has(key)) return urlCache.get(key);
+  const r = await dbGet('items', id);
+  const buf = await dec(r.iv, r.ct);
+  const url = URL.createObjectURL(new Blob([buf], { type:r.type || 'image/jpeg' }));
+  urlCache.set(key, url);
+  trimFullCache();
+  return url;
 }
-function albums(){return [...new Set(photos.map(p=>p.album).filter(Boolean))].sort();}
-const isVid=p=>(p.type||'').startsWith('video');
-function fmtDur(s){s=Math.round(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
-const LARGE=5*1048576, RECENT_MS=30*864e5;
-function collCount(k){
-  switch(k){
-    case '__fav':return photos.filter(p=>p.fav).length;
-    case '__recent':{const c=Date.now()-RECENT_MS;return photos.filter(p=>(p.added||p.created)>c).length;}
-    case '__video':return photos.filter(isVid).length;
-    case '__shot':return photos.filter(p=>p.shot).length;
-    case '__large':return photos.filter(p=>(p.size||0)>=LARGE).length;
-  }return 0;
-}
-function renderChips(){
-  const c=$('chips'); c.innerHTML='';
-  const mk=(label,val)=>{const b=document.createElement('button');b.className='chip'+(curAlbum===val?' sel':'');
-    b.textContent=label;b.onclick=()=>{curAlbum=val;renderChips();renderGrid();};c.appendChild(b);};
-  mk('All','__all');
-  mk('♥ Favorites','__fav');
-  [['__recent','Recent'],['__video','Videos'],['__shot','Screenshots'],['__large','Large']]
-    .forEach(([k,l])=>{if(collCount(k))mk(l,k);});
-  const as=albums();
-  if(as.length){const d=document.createElement('div');d.className='chipdiv';c.appendChild(d);}
-  as.forEach(a=>mk(a,a));
-}
-function visible(){
-  switch(curAlbum){
-    case '__all':return photos;
-    case '__fav':return photos.filter(p=>p.fav);
-    case '__recent':{const c=Date.now()-RECENT_MS;return photos.filter(p=>(p.added||p.created)>c);}
-    case '__video':return photos.filter(isVid);
-    case '__shot':return photos.filter(p=>p.shot);
-    case '__large':return photos.filter(p=>(p.size||0)>=LARGE).sort((a,b)=>(b.size||0)-(a.size||0));
-    default:return photos.filter(p=>p.album===curAlbum);
+function trimFullCache(){
+  const keep = new Set([vList[vIdx-1], vList[vIdx], vList[vIdx+1]].filter(Boolean).map(id => 'F' + id));
+  const full = [...urlCache.keys()].filter(k => k[0] === 'F' && !keep.has(k));
+  while (full.length > 5){
+    const k = full.shift();
+    URL.revokeObjectURL(urlCache.get(k));
+    urlCache.delete(k);
+    const i = vList.indexOf(k.slice(1));
+    if (i >= 0 && $('#slides').children[i]) $('#slides').children[i].querySelector('img').removeAttribute('src');
   }
 }
-const EMPTY_MSG={__fav:'No favorites yet — tap ♡ in the viewer.',__recent:'Nothing added in the last 30 days.',
-  __video:'No videos yet — import some or record with the camera.',__shot:'No screenshots detected.',
-  __large:'No items over 5 MB.'};
-async function renderGrid(){
-  const g=$('grid'); g.innerHTML='';
-  const list=visible();
-  $('countLbl').textContent=list.length?list.length+(list.length===1?' item':' items'):'';
-  if(!list.length){
-    g.innerHTML=`<div class="empty">
-      <div class="keyring"><svg viewBox="0 0 24 24"><circle cx="12" cy="9.5" r="3.2"/><path d="M12 12.7 L10.4 18.5 h3.2 Z"/></svg></div>
-      <h2>${curAlbum==='__all'?'Your vault is empty':'Nothing here yet'}</h2>
-      <p>${curAlbum==='__all'?'Use the camera or tap + to add photos. Everything is encrypted on this device — nothing reaches the camera roll.':(EMPTY_MSG[curAlbum]||'Move photos here from the Select menu.')}</p></div>`;
+function purgeURLs(){ urlCache.forEach(u => URL.revokeObjectURL(u)); urlCache.clear(); }
+
+/* ---------------- UI plumbing ---------------- */
+const show = id => { $$('.screen').forEach(s => s.classList.remove('on')); $('#'+id).classList.add('on'); };
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), 2200); }
+function busy(on, txt='Working…'){ $('#busyTxt').textContent = txt; $('#busy').classList.toggle('on', on); }
+function openSheet(html){ $('#sheetBody').innerHTML = html; $('#veil').classList.add('on'); $('#sheet').classList.add('on'); }
+function closeSheet(){ $('#veil').classList.remove('on'); $('#sheet').classList.remove('on'); }
+$('#veil').onclick = closeSheet;
+
+/* ---------------- Keypad ---------------- */
+function buildPad(padEl, dotsEl, onDone, minLen = 6){
+  let buf = '';
+  const paint = () => {
+    dotsEl.innerHTML = '';
+    const n = Math.max(minLen, buf.length);
+    for (let i = 0; i < n; i++){
+      const d = document.createElement('div');
+      d.className = 'dot' + (i < buf.length ? ' f' : '');
+      dotsEl.appendChild(d);
+    }
+  };
+  const keys = ['1','2','3','4','5','6','7','8','9','del','0','go'];
+  padEl.innerHTML = '';
+  keys.forEach(k => {
+    const b = document.createElement('button');
+    if (k === 'del'){ b.className = 'key util'; b.textContent = 'Delete'; }
+    else if (k === 'go'){ b.className = 'key util'; b.textContent = 'Enter'; b.style.color = 'var(--accent)'; }
+    else { b.className = 'key'; b.textContent = k; }
+    b.onclick = () => {
+      if (k === 'del') buf = buf.slice(0, -1);
+      else if (k === 'go'){ if (buf.length >= minLen) { const v = buf; buf = ''; paint(); onDone(v); } }
+      else if (buf.length < 32) buf += k;
+      paint();
+      if (navigator.vibrate) navigator.vibrate(4);
+    };
+    padEl.appendChild(b);
+  });
+  paint();
+  return { reset(){ buf = ''; paint(); } };
+}
+function shake(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+
+/* ---------------- Setup flow ---------------- */
+let firstPass = null, suPad;
+function setupFlow(){
+  show('setup');
+  const dots = $('#suDots');
+  suPad = buildPad($('#suPad'), dots, v => handleNew(v));
+  $('#suPwGo').onclick = () => { const v = $('#suPwIn').value; if (v.length >= 8) { $('#suPwIn').value=''; handleNew(v);} else $('#suErr').textContent = 'Use at least 8 characters.'; };
+  $('#suToggle').onclick = () => {
+    const usingPad = !$('#suPad').classList.contains('hidden');
+    $('#suPad').classList.toggle('hidden', usingPad);
+    dots.classList.toggle('hidden', usingPad);
+    $('#suPw').classList.toggle('hidden', !usingPad);
+    $('#suToggle').textContent = usingPad ? 'Use a numeric passcode instead' : 'Use a passphrase instead';
+    firstPass = null; $('#suTitle').textContent = usingPad ? 'Choose a passphrase' : 'Choose a passcode';
+    $('#suErr').textContent = '';
+  };
+}
+async function handleNew(v){
+  $('#suErr').textContent = '';
+  if (firstPass === null){
+    firstPass = v;
+    $('#suTitle').textContent = 'Enter it again';
+    $('#suSub').textContent = 'Confirming you typed what you meant to.';
     return;
   }
-  for(const p of list){
-    const t=document.createElement('div'); t.className='tile'; t.dataset.id=p.id;
-    const img=document.createElement('img'); img.alt='';
-    const ck=document.createElement('div'); ck.className='ck';
-    t.append(img,ck);
-    if(isVid(p)){const d=document.createElement('span');d.className='dur';d.textContent=fmtDur(p.dur);t.appendChild(d);}
-    if(p.fav){const h=document.createElement('span');h.className='fv';h.textContent='♥';t.appendChild(h);}
-    g.appendChild(t);
-    t.onclick=()=>selecting?toggleSel(p.id,t):openViewer(p.id);
-    let pressT; t.addEventListener('touchstart',()=>{pressT=setTimeout(()=>{if(!selecting){enterSelect();toggleSel(p.id,t);}},480);},{passive:true});
-    t.addEventListener('touchend',()=>clearTimeout(pressT)); t.addEventListener('touchmove',()=>clearTimeout(pressT),{passive:true});
-    if(thumbURLs.has(p.id)){img.src=thumbURLs.get(p.id);}
-    else decBuf(p.thumbIv,p.thumb).then(buf=>{
-      const u=URL.createObjectURL(new Blob([buf],{type:'image/jpeg'}));
-      thumbURLs.set(p.id,u); img.src=u;
-    }).catch(()=>{t.style.background='var(--danger)';});
+  if (v !== firstPass){
+    firstPass = null; shake($('#setup'));
+    $('#suErr').textContent = "Those didn't match. Start again.";
+    $('#suTitle').textContent = 'Choose a passcode';
+    return;
   }
+  busy(true, 'Creating your vault…');
+  await createVault(v);
+  firstPass = null;
+  busy(false);
+  await loadAll();
+  enterApp();
 }
 
-/* ---------- selection ---------- */
-function enterSelect(){selecting=true;selected.clear();$('galleryScreen').classList.add('selecting');$('selectBtn').textContent='Cancel';}
-function exitSelect(){selecting=false;selected.clear();$('galleryScreen').classList.remove('selecting');$('selectBtn').textContent='Select';
-  document.querySelectorAll('.tile.sel').forEach(t=>t.classList.remove('sel'));}
-function toggleSel(id,tile){if(selected.has(id)){selected.delete(id);tile.classList.remove('sel');}else{selected.add(id);tile.classList.add('sel');}}
-$('selectBtn').onclick=()=>selecting?exitSelect():enterSelect();
-$('selAll').onclick=()=>{visible().forEach(p=>selected.add(p.id));document.querySelectorAll('.tile').forEach(t=>t.classList.add('sel'));};
-$('selDelete').onclick=async()=>{
-  if(!selected.size) return toast('Nothing selected');
-  if(!confirm(`Delete ${selected.size} item${selected.size>1?'s':''}? This cannot be undone.`)) return;
-  busy(true,'Deleting…');
-  for(const id of selected){await photoDel(id);await blobDel(id);const u=thumbURLs.get(id);if(u){URL.revokeObjectURL(u);thumbURLs.delete(id);}}
-  busy(false); exitSelect(); await refresh(); updateStorage(); toast('Deleted');
-};
-$('selMove').onclick=()=>{if(!selected.size)return toast('Nothing selected');openAlbumSheet([...selected]);};
-$('selFav').onclick=async()=>{
-  if(!selected.size) return toast('Nothing selected');
-  const list=photos.filter(p=>selected.has(p.id));
-  const target=!list.every(p=>p.fav);
-  for(const p of list){p.fav=target;await photoPut(p);}
-  exitSelect(); renderChips(); renderGrid();
-  toast(target?'Added to Favorites':'Removed from Favorites');
-};
-$('selShare').onclick=()=>{if(!selected.size)return toast('Nothing selected');shareIds([...selected]);};
+/* ---------------- Lock flow ---------------- */
+let lkPad;
+function lockFlow(){
+  show('lock');
+  $('#lkErr').textContent = '';
+  lkPad = buildPad($('#lkPad'), $('#lkDots'), tryUnlock);
+  $('#lkPwGo').onclick = () => { const v = $('#lkPwIn').value; $('#lkPwIn').value = ''; tryUnlock(v); };
+  $('#lkPwIn').onkeydown = e => { if (e.key === 'Enter') $('#lkPwGo').click(); };
+}
+async function tryUnlock(v){
+  busy(true, 'Unlocking…');
+  try {
+    await unlock(v);
+    busy(false);
+    await loadAll();
+    enterApp();
+  } catch(e){
+    busy(false);
+    shake($('#lock'));
+    $('#lkErr').textContent = 'Wrong passcode.';
+    if (navigator.vibrate) navigator.vibrate([12,40,12]);
+    // keypad mode: also allow passphrase entry if the vault used one
+    if ($('#lkPad').classList.contains('hidden')) return;
+    $('#lkPw').classList.remove('hidden');
+  }
+}
+function lockNow(){
+  if (MKRAW) MKRAW.fill(0);
+  MK = null; MKRAW = null; items = []; albums = []; sel.clear(); selMode = false;
+  purgeURLs(); stopCam(); closeSheet();
+  $('#grid').innerHTML = '';
+  lockFlow();
+}
 
-/* ---------- share (export to camera roll etc.) ---------- */
-async function shareIds(ids){
-  if(!navigator.share) return toast('Sharing is not available on this device');
-  if(ids.length>10) return toast('Share up to 10 items at a time');
-  busy(true,'Decrypting…');
-  try{
-    const files=[];
-    for(const id of ids){
-      const p=photos.find(x=>x.id===id); if(!p) continue;
-      const r=await blobGet(id);
-      const buf=await decBuf(r.iv,r.data);
-      const ext=isVid(p)?'.mp4':(p.type||'').includes('png')?'.png':'.jpg';
-      const nm=((p.name||'photo').replace(/\.[a-z0-9]{2,5}$/i,'')||'photo')+ext;
-      files.push(new File([buf],nm,{type:p.type||'image/jpeg'}));
+/* ---------------- Load & render ---------------- */
+async function loadAll(){
+  const s = await dbGet('meta', 'settings');
+  if (s && s.v) settings = Object.assign(settings, s.v);
+  const raw = await dbAll('items');
+  items = raw.map(stripHeavy).sort((a,b) => b.ts - a.ts);
+  const al = await dbAll('albums');
+  albums = [];
+  for (const a of al){
+    try { albums.push({ id:a.id, name:tdec.decode(await dec(a.iv, a.ct)) }); } catch(e){}
+  }
+  albums.sort((a,b) => a.name.localeCompare(b.name));
+}
+function enterApp(){ show('app'); renderChips(); renderGrid(); armIdle(); requestPersist(); }
+
+function renderChips(){
+  const c = $('#chips'); c.innerHTML = '';
+  const mk = (id, label) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (curAlbum === id ? ' on' : '');
+    b.textContent = label;
+    b.onclick = () => { curAlbum = id; renderChips(); renderGrid(); };
+    if (id !== 'all' && id !== 'none'){
+      let t; b.addEventListener('touchstart', () => { t = setTimeout(() => albumMenu(id), 550); }, {passive:true});
+      b.addEventListener('touchend', () => clearTimeout(t));
+      b.oncontextmenu = e => { e.preventDefault(); albumMenu(id); };
     }
-    busy(false);
-    if(navigator.canShare&&!navigator.canShare({files})) return toast('This device cannot share these files');
-    await navigator.share({files});
-  }catch(e){
-    busy(false);
-    if(!e||e.name!=='AbortError') toast('Share failed — try one item at a time');
-  }
-}
-
-/* ---------- import & analysis ---------- */
-const SHOT_DIMS=new Set(['640x1136','750x1334','828x1792','1080x1920','1080x2340','1125x2436','1170x2532',
-  '1179x2556','1206x2622','1242x2208','1242x2688','1284x2778','1290x2796','1320x2868','1488x2266',
-  '1536x2048','1620x2160','1640x2360','1668x2388','2048x2732']);
-function isShot(name,type,w,h){
-  if(/screen\s?shot/i.test(name||'')) return true;
-  if(type!=='image/png') return false;
-  return SHOT_DIMS.has(Math.min(w,h)+'x'+Math.max(w,h));
-}
-async function sha256(buf){return b2a(await crypto.subtle.digest('SHA-256',buf));}
-function loadImg(blob){return new Promise((res,rej)=>{
-  const u=URL.createObjectURL(blob),i=new Image();
-  i.onload=()=>res({img:i,u}); i.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('decode'));};
-  i.src=u;});}
-function dhashFrom(src,sw,sh){ // 64-bit perceptual difference hash → 16 hex chars
-  const c=document.createElement('canvas');c.width=9;c.height=8;
-  c.getContext('2d').drawImage(src,0,0,9,8);
-  const d=c.getContext('2d').getImageData(0,0,9,8).data,g=[];
-  for(let i=0;i<72;i++)g.push(d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114);
-  let hex='',nib=0,cnt=0;
-  for(let r=0;r<8;r++)for(let col=0;col<8;col++){
-    nib=(nib<<1)|(g[r*9+col]<g[r*9+col+1]?1:0);
-    if(++cnt===4){hex+=nib.toString(16);nib=0;cnt=0;}
-  }
-  return hex;
-}
-async function analyzeImage(blob){
-  const {img,u}=await loadImg(blob);
-  const m=480,r=Math.min(1,m/Math.max(img.width,img.height));
-  const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*r));c.height=Math.max(1,Math.round(img.height*r));
-  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-  const dhash=dhashFrom(img), w=img.width, h=img.height;
-  URL.revokeObjectURL(u);
-  const thumb=await new Promise((res,rej)=>c.toBlob(b=>b?b.arrayBuffer().then(res):rej(new Error('thumb')),'image/jpeg',.78));
-  return {thumb,w,h,dhash};
-}
-function analyzeVideo(blob){return new Promise((res,rej)=>{
-  const u=URL.createObjectURL(blob),v=document.createElement('video');
-  v.muted=true;v.playsInline=true;v.preload='auto';
-  const fail=()=>{URL.revokeObjectURL(u);rej(new Error('video'));};
-  v.onerror=fail;
-  v.onloadedmetadata=()=>{try{v.currentTime=Math.min(.3,(v.duration||1)/2);}catch(e){fail();}};
-  v.onseeked=()=>{
-    try{
-      const m=480,r=Math.min(1,m/Math.max(v.videoWidth||m,v.videoHeight||m));
-      const c=document.createElement('canvas');
-      c.width=Math.max(1,Math.round((v.videoWidth||m)*r));c.height=Math.max(1,Math.round((v.videoHeight||m)*r));
-      c.getContext('2d').drawImage(v,0,0,c.width,c.height);
-      const out={w:v.videoWidth,h:v.videoHeight,dur:v.duration||0};
-      URL.revokeObjectURL(u);
-      c.toBlob(b=>b?b.arrayBuffer().then(t=>res({...out,thumb:t})):rej(new Error('thumb')),'image/jpeg',.75);
-    }catch(e){fail();}
+    c.appendChild(b);
   };
-  v.src=u;
-});}
-function targetAlbum(){return curAlbum.startsWith('__')?'':curAlbum;}
-async function addImage(f,nameOverride){
-  const buf=await f.arrayBuffer();
-  const a=await analyzeImage(f);
-  const eData=await encBuf(buf), eThumb=await encBuf(a.thumb), sha=await sha256(buf);
-  const id=crypto.randomUUID(), name=nameOverride||f.name||'Photo';
-  await photoPut({id,name,type:f.type||'image/jpeg',album:targetAlbum(),created:f.lastModified||Date.now(),
-    added:Date.now(),size:buf.byteLength,w:a.w,h:a.h,dhash:a.dhash,sha,fav:false,
-    shot:isShot(name,f.type,a.w,a.h),thumbIv:eThumb.iv,thumb:eThumb.data});
-  await blobPut({id,iv:eData.iv,data:eData.data});
-  return a.thumb;
+  mk('all', 'All');
+  albums.forEach(a => mk(a.id, a.name));
+  if (items.some(i => !i.album)) mk('none', 'Unsorted');
+  const add = document.createElement('button');
+  add.className = 'chip add'; add.textContent = '+ Album';
+  add.onclick = newAlbum; c.appendChild(add);
 }
-async function addVideo(f,nameOverride){
-  const buf=await f.arrayBuffer();
-  const a=await analyzeVideo(f);
-  const eData=await encBuf(buf), eThumb=await encBuf(a.thumb), sha=await sha256(buf);
-  const id=crypto.randomUUID();
-  await photoPut({id,name:nameOverride||f.name||'Video',type:f.type||'video/mp4',album:targetAlbum(),
-    created:f.lastModified||Date.now(),added:Date.now(),size:buf.byteLength,w:a.w,h:a.h,dur:a.dur,sha,fav:false,
-    shot:false,thumbIv:eThumb.iv,thumb:eThumb.data});
-  await blobPut({id,iv:eData.iv,data:eData.data});
-  return a.thumb;
-}
-$('fab').onclick=()=>$('fileInput').click();
-$('fileInput').onchange=async e=>{
-  const files=[...e.target.files]; e.target.value='';
-  if(!files.length) return;
-  const big=files.filter(f=>f.size>200*1048576);
-  if(big.length&&!confirm(`${big.length} file${big.length>1?'s are':' is'} over 200 MB. Very large videos may not play back smoothly. Add anyway?`)) return;
-  busy(true,`Encrypting 0 / ${files.length}`);
-  let done=0, fail=0;
-  for(const f of files){
-    try{ if((f.type||'').startsWith('video')) await addVideo(f); else await addImage(f); }
-    catch(err){fail++;}
-    done++; $('busyLabel').textContent=`Encrypting ${done} / ${files.length}`;
-  }
-  busy(false); await refresh(); updateStorage();
-  toast(fail?`Added ${done-fail}, ${fail} failed`:`Added ${done} item${done>1?'s':''} — you can now delete the originals from Photos`,3400);
-};
 
-/* ================= Viewer ================= */
-let curURL=null;
-const sVid=$('stageVid');
-async function openViewer(id){
-  viewIdx=visible().findIndex(p=>p.id===id);
-  if(viewIdx<0) return;
-  $('viewer').classList.add('on'); $('viewer').classList.remove('zen');
-  await loadView();
-}
-async function loadView(){
-  const p=visible()[viewIdx]; if(!p) return closeViewer();
-  $('vName').textContent=p.name||'Photo';
-  $('vDate').textContent=fmtDate(p.created)+(p.album?' · '+p.album:'')+(p.size?' · '+fmtBytes(p.size):'');
-  $('vFav').textContent=p.fav?'♥':'♡'; $('vFav').style.color=p.fav?'var(--accent)':'';
-  resetZoom();
-  const rec=await blobGet(p.id);
-  try{
-    const buf=await decBuf(rec.iv,rec.data);
-    if(curURL) URL.revokeObjectURL(curURL);
-    curURL=URL.createObjectURL(new Blob([buf],{type:p.type}));
-    if(isVid(p)){
-      sImg.style.display='none'; sImg.removeAttribute('src');
-      sVid.style.display='block'; sVid.src=curURL;
-    }else{
-      sVid.pause(); sVid.removeAttribute('src'); sVid.style.display='none';
-      sImg.style.display=''; sImg.src=curURL;
-    }
-  }catch(e){toast('Could not decrypt this item');}
-}
-function closeViewer(silent){
-  $('viewer').classList.remove('on');
-  sVid.pause(); sVid.removeAttribute('src'); sVid.style.display='none';
-  if(curURL){URL.revokeObjectURL(curURL);curURL=null;}
-  $('stageImg').removeAttribute('src'); viewIdx=-1;
-}
-$('vClose').onclick=()=>closeViewer();
-$('vDelete').onclick=async()=>{
-  const p=visible()[viewIdx];
-  if(!confirm('Delete this item? This cannot be undone.')) return;
-  await photoDel(p.id); await blobDel(p.id);
-  const u=thumbURLs.get(p.id); if(u){URL.revokeObjectURL(u);thumbURLs.delete(p.id);}
-  closeViewer(); await refresh(); updateStorage(); toast('Deleted');
-};
-$('vAlbum').onclick=()=>openAlbumSheet([visible()[viewIdx].id]);
-$('vFav').onclick=async()=>{
-  const p=visible()[viewIdx]; if(!p) return;
-  p.fav=!p.fav; await photoPut(p);
-  $('vFav').textContent=p.fav?'♥':'♡'; $('vFav').style.color=p.fav?'var(--accent)':'';
-  renderChips(); renderGrid();
-};
-$('vShare').onclick=()=>{const p=visible()[viewIdx];if(p)shareIds([p.id]);};
-
-/* --- gestures: swipe, double-tap zoom, pinch, pan --- */
-let zx=1,zpx=0,zpy=0,touch0=null,pinch0=null,lastTap=0;
-const stage=$('stage'), sImg=$('stageImg');
-function applyZ(){sImg.style.transform=`translate(${zpx}px,${zpy}px) scale(${zx})`;}
-function resetZoom(){zx=1;zpx=0;zpy=0;applyZ();}
-stage.addEventListener('touchstart',e=>{
-  if(e.target===sVid) return;
-  if(e.touches.length===2){const [a,b]=e.touches;pinch0={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:zx};}
-  else if(e.touches.length===1){touch0={x:e.touches[0].clientX,y:e.touches[0].clientY,px:zpx,py:zpy,t:Date.now()};}
-},{passive:true});
-stage.addEventListener('touchmove',e=>{
-  if(e.target===sVid) return;
-  if(e.touches.length===2&&pinch0){const [a,b]=e.touches;
-    zx=Math.min(5,Math.max(1,pinch0.z*Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)/pinch0.d));
-    if(zx===1){zpx=0;zpy=0;} applyZ(); e.preventDefault();}
-  else if(e.touches.length===1&&touch0&&zx>1){
-    zpx=touch0.px+(e.touches[0].clientX-touch0.x); zpy=touch0.py+(e.touches[0].clientY-touch0.y);
-    applyZ(); e.preventDefault();}
-},{passive:false});
-stage.addEventListener('touchend',e=>{
-  if(e.target===sVid) return;
-  if(pinch0){pinch0=null;return;}
-  if(!touch0) return;
-  const dx=(e.changedTouches[0].clientX-touch0.x), dy=(e.changedTouches[0].clientY-touch0.y), dt=Date.now()-touch0.t;
-  touch0=null;
-  if(zx===1&&dt<400&&Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
-    const list=visible();
-    viewIdx=dx<0?Math.min(list.length-1,viewIdx+1):Math.max(0,viewIdx-1);
-    loadView(); return;
+let io = new IntersectionObserver(async es => {
+  for (const e of es){
+    if (!e.isIntersecting) continue;
+    io.unobserve(e.target);
+    const id = e.target.dataset.id;
+    try {
+      const u = await thumbURL(id);
+      if (u) e.target.querySelector('img').src = u;
+    } catch(err){}
   }
-  if(dt<250&&Math.abs(dx)<8&&Math.abs(dy)<8){
-    const now=Date.now();
-    if(now-lastTap<300){zx=zx>1?1:2.4;zpx=0;zpy=0;applyZ();lastTap=0;}
-    else{lastTap=now;setTimeout(()=>{if(lastTap&&Date.now()-lastTap>=290){$('viewer').classList.toggle('zen');lastTap=0;}},300);}
-  }
-});
+}, { rootMargin:'400px' });
 
-/* ================= Albums ================= */
-let albumTargets=[];
-function openAlbumSheet(ids){
-  albumTargets=ids;
-  const l=$('albumList'); l.innerHTML='';
-  const opts=['',...albums()];
-  opts.forEach(a=>{
-    const b=document.createElement('button'); b.className='row';
-    b.innerHTML=`<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>${a||'No album (All only)'}`;
-    b.onclick=()=>moveTo(a); l.appendChild(b);
+function visible(){
+  if (curAlbum === 'all')  return items;
+  if (curAlbum === 'none') return items.filter(i => !i.album);
+  return items.filter(i => i.album === curAlbum);
+}
+function renderGrid(){
+  const g = $('#grid'); g.innerHTML = '';
+  const list = visible();
+  $('#title').textContent = curAlbum === 'all' ? 'Archive'
+    : (curAlbum === 'none' ? 'Unsorted' : (albums.find(a => a.id === curAlbum)?.name || 'Archive'));
+  if (!list.length){
+    g.innerHTML = '<div class="empty"><b>Nothing here yet</b>Tap the camera to take a photo, or the plus to bring one in from your files.</div>';
+    return;
+  }
+  list.forEach(it => {
+    const d = document.createElement('div');
+    d.className = 'cell' + (selMode ? ' selmode' : '') + (sel.has(it.id) ? ' sel' : '');
+    d.dataset.id = it.id;
+    d.innerHTML = '<img alt="" decoding="async"><div class="tick"></div>';
+    d.onclick = () => selMode ? toggleSel(it.id, d) : openViewer(it.id);
+    let t;
+    d.addEventListener('touchstart', () => { t = setTimeout(() => { if (!selMode){ selMode = true; renderSelUI(); toggleSel(it.id, d); } }, 500); }, {passive:true});
+    d.addEventListener('touchend', () => clearTimeout(t));
+    d.addEventListener('touchmove', () => clearTimeout(t), {passive:true});
+    g.appendChild(d);
+    io.observe(d);
   });
-  $('albumSheet').classList.add('on');
 }
-$('newAlbumBtn').onclick=()=>{
-  const name=(prompt('Album name')||'').trim();
-  if(name) moveTo(name);
-};
-async function moveTo(album){
-  for(const id of albumTargets){const p=photos.find(x=>x.id===id);if(p){p.album=album;await photoPut(p);}}
-  $('albumSheet').classList.remove('on'); exitSelect(); await refresh();
-  if(viewIdx>=0) loadView();
-  toast(album?`Moved to “${album}”`:'Removed from album');
+function toggleSel(id, el){
+  sel.has(id) ? sel.delete(id) : sel.add(id);
+  el.classList.toggle('sel', sel.has(id));
+  $('#title').textContent = sel.size ? sel.size + ' selected' : 'Select photos';
 }
+function renderSelUI(){
+  $$('.cell').forEach(c => c.classList.toggle('selmode', selMode));
+  $('#selCancel').classList.toggle('hidden', !selMode);
+  $('#btnSelect').classList.toggle('hidden', selMode);
+  $('#fabs').classList.toggle('hidden', selMode);
+  $('#selFabs').classList.toggle('hidden', !selMode);
+  if (!selMode){ sel.clear(); $$('.cell').forEach(c => c.classList.remove('sel')); renderGrid(); }
+  else $('#title').textContent = 'Select photos';
+}
+$('#btnSelect').onclick = () => { selMode = true; renderSelUI(); };
+$('#selCancel').onclick = () => { selMode = false; renderSelUI(); };
+$('#btnLock').onclick = lockNow;
 
-/* ---------- duplicates ---------- */
-function ham(a,b){let d=0;for(let i=0;i<a.length;i++){let x=parseInt(a[i],16)^parseInt(b[i],16);while(x){d+=x&1;x>>=1;}}return d;}
-async function getThumbURL(p){
-  if(thumbURLs.has(p.id)) return thumbURLs.get(p.id);
-  const buf=await decBuf(p.thumbIv,p.thumb);
-  const u=URL.createObjectURL(new Blob([buf],{type:'image/jpeg'}));
-  thumbURLs.set(p.id,u); return u;
+/* ---------------- Albums ---------------- */
+async function saveAlbum(name){
+  const e = await enc(te.encode(name));
+  const rec = { id:uid(), iv:e.iv, ct:e.ct };
+  await dbPut('albums', rec);
+  albums.push({ id:rec.id, name });
+  albums.sort((a,b) => a.name.localeCompare(b.name));
+  return rec.id;
 }
-$('dupBtn').onclick=async()=>{
-  $('settingsSheet').classList.remove('on');
-  busy(true,'Scanning…'); let i=0;
-  for(const p of photos){
-    let changed=false;
-    if(!p.sha){try{const r=await blobGet(p.id);p.sha=await sha256(await decBuf(r.iv,r.data));changed=true;}catch(e){}}
-    if(!p.dhash&&!isVid(p)){
-      try{const buf=await decBuf(p.thumbIv,p.thumb);
-        const {img,u}=await loadImg(new Blob([buf],{type:'image/jpeg'}));
-        p.dhash=dhashFrom(img); URL.revokeObjectURL(u); changed=true;}catch(e){}
+function newAlbum(){
+  askText('New album', 'Name it something you\'ll recognise.', '', async v => {
+    if (!v.trim()) return;
+    await saveAlbum(v.trim()); renderChips(); toast('Album created');
+  });
+}
+function albumMenu(id){
+  const a = albums.find(x => x.id === id); if (!a) return;
+  openSheet(`<div class="sh">${escapeHtml(a.name)}</div>
+    <button class="row" id="arn"><div class="g"><div class="t">Rename album</div></div></button>
+    <button class="row dz" id="adl"><div class="g"><div class="t">Delete album</div><div class="d">Photos move to Unsorted, nothing is deleted</div></div></button>`);
+  $('#arn').onclick = () => { closeSheet(); askText('Rename album', '', a.name, async v => {
+    if (!v.trim()) return;
+    const e = await enc(te.encode(v.trim()));
+    await dbPut('albums', { id, iv:e.iv, ct:e.ct });
+    a.name = v.trim(); albums.sort((x,y) => x.name.localeCompare(y.name)); renderChips(); renderGrid();
+  }); };
+  $('#adl').onclick = async () => {
+    closeSheet();
+    for (const it of items.filter(i => i.album === id)){
+      const r = await dbGet('items', it.id); r.album = null; await dbPut('items', r); it.album = null;
     }
-    if(changed) await photoPut(p);
-    i++; $('busyLabel').textContent=`Scanning ${i} / ${photos.length}`;
+    await dbDel('albums', id);
+    albums = albums.filter(x => x.id !== id);
+    if (curAlbum === id) curAlbum = 'all';
+    renderChips(); renderGrid(); toast('Album deleted');
+  };
+}
+function moveSheet(ids){
+  const rows = albums.map(a => `<button class="row mv" data-a="${a.id}"><div class="g"><div class="t">${escapeHtml(a.name)}</div></div></button>`).join('');
+  openSheet(`<div class="sh">Move ${ids.length} photo${ids.length>1?'s':''} to</div>
+    <button class="row mv" data-a=""><div class="g"><div class="t">Unsorted</div></div></button>
+    ${rows}
+    <button class="row" id="mvNew"><div class="g"><div class="t" style="color:var(--accent)">New album…</div></div></button>`);
+  $$('.mv').forEach(b => b.onclick = async () => { await doMove(ids, b.dataset.a || null); closeSheet(); });
+  $('#mvNew').onclick = () => { closeSheet(); askText('New album', '', '', async v => {
+    if (!v.trim()) return; const id = await saveAlbum(v.trim()); await doMove(ids, id);
+  }); };
+}
+async function doMove(ids, album){
+  for (const id of ids){
+    const r = await dbGet('items', id); r.album = album; await dbPut('items', r);
+    const it = items.find(i => i.id === id); if (it) it.album = album;
   }
-  const bySha=new Map();
-  photos.forEach(p=>{if(p.sha){if(!bySha.has(p.sha))bySha.set(p.sha,[]);bySha.get(p.sha).push(p);}});
-  const groups=[...bySha.values()].filter(g=>g.length>1).map(g=>({kind:'Exact duplicates',items:g}));
-  const inExact=new Set(); groups.forEach(g=>g.items.forEach(p=>inExact.add(p.id)));
-  const imgs=photos.filter(p=>p.dhash&&!inExact.has(p.id));
-  const used=new Set();
-  for(let a=0;a<imgs.length;a++){
-    if(used.has(imgs[a].id)) continue;
-    const g=[imgs[a]];
-    for(let b=a+1;b<imgs.length;b++)
-      if(!used.has(imgs[b].id)&&ham(imgs[a].dhash,imgs[b].dhash)<=6) g.push(imgs[b]);
-    if(g.length>1){g.forEach(p=>used.add(p.id));groups.push({kind:'Similar photos',items:g});}
-  }
-  busy(false);
-  renderDups(groups);
-};
-function renderDups(groups){
-  const l=$('dupList'); l.innerHTML='';
-  if(!groups.length) l.innerHTML='<div class="note">No duplicates found — every item in the vault is unique.</div>';
-  for(const g of groups){
-    const items=[...g.items].sort((x,y)=>(y.added||y.created)-(x.added||x.created)); // keep newest
-    const div=document.createElement('div'); div.className='dupgroup';
-    const th=document.createElement('div'); th.className='thumbs';
-    items.forEach(p=>{const im=document.createElement('img');getThumbURL(p).then(u=>im.src=u).catch(()=>{});th.appendChild(im);});
-    const meta=document.createElement('div'); meta.className='meta';
-    const freed=items.slice(1).reduce((s,p)=>s+(p.size||0),0);
-    const lbl=document.createElement('span'); lbl.textContent=`${g.kind} · ${items.length} items`;
-    const b=document.createElement('button'); b.textContent=`Keep newest · free ${fmtBytes(freed)}`;
-    b.onclick=async()=>{
-      if(!confirm(`Delete ${items.length-1} item${items.length>2?'s':''}, keeping the newest?`)) return;
-      for(const p of items.slice(1)){
-        await photoDel(p.id); await blobDel(p.id);
-        const u=thumbURLs.get(p.id); if(u){URL.revokeObjectURL(u);thumbURLs.delete(p.id);}
-      }
-      div.remove(); await refresh(); updateStorage(); toast('Duplicates removed');
-    };
-    meta.append(lbl,b); div.append(th,meta); l.appendChild(div);
-  }
-  $('dupSheet').classList.add('on');
+  selMode = false; renderSelUI(); renderChips(); renderGrid(); toast('Moved');
+}
+$('#btnMove').onclick = () => { if (sel.size) moveSheet([...sel]); };
+$('#btnDel').onclick  = () => { if (sel.size) confirmDelete([...sel]); };
+
+function confirmDelete(ids){
+  askConfirm('Delete ' + ids.length + ' photo' + (ids.length>1?'s':'') + '?',
+    'This is permanent. There is no recently-deleted folder.', 'Delete', true, async () => {
+    for (const id of ids){
+      await dbDel('items', id);
+      const u = urlCache.get(id); if (u) URL.revokeObjectURL(u);
+      const f = urlCache.get('F'+id); if (f) URL.revokeObjectURL(f);
+      urlCache.delete(id); urlCache.delete('F'+id);
+    }
+    items = items.filter(i => !ids.includes(i.id));
+    selMode = false; renderSelUI(); renderGrid(); toast('Deleted');
+  });
 }
 
-/* ================= Settings ================= */
-$('settingsBtn').onclick=()=>{updateStorage();$('settingsSheet').classList.add('on');updateAutoLockLbl();flipLblUpd();};
-$('lockNowBtn').onclick=lock;
-document.querySelectorAll('.sheetwrap').forEach(w=>w.addEventListener('click',e=>{if(e.target===w)w.classList.remove('on');}));
-async function updateStorage(){
-  if(!navigator.storage||!navigator.storage.estimate) return;
-  const {usage=0,quota=0}=await navigator.storage.estimate();
-  $('storText').textContent=`${fmtBytes(usage)} of ${fmtBytes(quota)}`;
-  $('storBar').style.width=quota?Math.min(100,usage/quota*100)+'%':'0%';
-}
-function updateAutoLockLbl(){$('autoLockLbl').textContent=idleNames[idleChoices.indexOf(idleMs)]||'3 min';}
-$('autoLockBtn').onclick=()=>{
-  const i=(idleChoices.indexOf(idleMs)+1)%idleChoices.length;
-  idleMs=idleChoices[i]; localStorage.setItem('ledger-idle',idleMs); updateAutoLockLbl(); resetIdle();
-};
-$('changePinBtn').onclick=()=>{
-  $('settingsSheet').classList.remove('on');
-  mode='change'; pinBuf=''; setSub(); drawDots();
-  $('galleryScreen').classList.remove('on'); $('lockScreen').classList.add('on');
-};
-$('verifyBtn').onclick=async()=>{
-  busy(true,'Verifying…'); let ok=0,bad=0,i=0;
-  for(const p of photos){
-    try{const r=await blobGet(p.id);await decBuf(r.iv,r.data);await decBuf(p.thumbIv,p.thumb);ok++;}
-    catch(e){bad++;}
-    i++; $('busyLabel').textContent=`Verifying ${i} / ${photos.length}`;
+/* ---------------- Import ---------------- */
+$('#btnImport').onclick = () => $('#filePick').click();
+$('#filePick').onchange = async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  if (!files.length) return;
+  let n = 0;
+  busy(true, 'Encrypting 1 of ' + files.length + '…');
+  for (const f of files){
+    busy(true, 'Encrypting ' + (++n) + ' of ' + files.length + '…');
+    try { await addPhoto(f, curAlbum === 'all' || curAlbum === 'none' ? null : curAlbum); } catch(err){ console.warn(err); }
   }
-  busy(false);
-  toast(bad?`${ok} OK · ${bad} damaged — export a backup now`:`All ${ok} items verified`,3200);
+  busy(false); renderGrid();
+  toast(n + ' added. Remember to delete the originals, including Recently Deleted.');
 };
 
-/* ---------- backup / restore ---------- */
-$('exportBtn').onclick=async()=>{
-  busy(true,'Preparing backup…');
-  const v=await metaGet('vault');
-  const out={format:'ledger-backup',version:1,exported:Date.now(),vault:v,photos:[]};
-  let i=0;
-  for(const p of photos){
-    const r=await blobGet(p.id);
-    out.photos.push({...p,thumbIv:b2a(p.thumbIv),thumb:b2a(p.thumb),iv:b2a(r.iv),data:b2a(r.data)});
-    i++; $('busyLabel').textContent=`Packing ${i} / ${photos.length}`;
+/* ---------------- Camera ---------------- */
+let stream = null, facing = 'environment', shotCount = 0;
+$('#btnCam').onclick = startCam;
+$('#camClose').onclick = () => { stopCam(); show('app'); renderGrid(); };
+$('#camFlip').onclick = () => { facing = facing === 'environment' ? 'user' : 'environment'; startCam(true); };
+$('#camShot').onclick = capture;
+$('#camTorch').onclick = toggleTorch;
+
+async function startCam(keepScreen){
+  if (!keepScreen){ shotCount = 0; $('#camCount').textContent = '0 saved'; $('#camLast').innerHTML = ''; }
+  show('cam');
+  stopStream();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode:{ ideal:facing }, width:{ ideal:4032 }, height:{ ideal:3024 } }, audio:false });
+  } catch(err){
+    try { stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false }); }
+    catch(e2){ show('app'); toast('Camera unavailable. Check the site\'s camera permission.'); return; }
   }
-  const blob=new Blob([JSON.stringify(out)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='vault-'+new Date().toISOString().slice(0,10)+'.ledger';
-  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  busy(false); toast('Backup exported — contents stay encrypted');
+  const v = $('#video');
+  v.srcObject = stream;
+  v.classList.toggle('mir', facing === 'user');
+  const track = stream.getVideoTracks()[0];
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  $('#camTorch').style.display = caps.torch ? 'flex' : 'none';
+  try { await v.play(); } catch(e){}
+}
+function stopStream(){ if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; } }
+function stopCam(){ stopStream(); const v = $('#video'); if (v) v.srcObject = null; }
+
+async function toggleTorch(){
+  const t = stream && stream.getVideoTracks()[0]; if (!t) return;
+  const on = !(t._torch);
+  try { await t.applyConstraints({ advanced:[{ torch:on }] }); t._torch = on;
+        $('#camTorch').style.background = on ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.14)'; }
+  catch(e){ toast('This camera has no light control.'); }
+}
+async function capture(){
+  const v = $('#video'); if (!v.videoWidth) return;
+  $('#flash').classList.remove('go'); void $('#flash').offsetWidth; $('#flash').classList.add('go');
+  if (navigator.vibrate) navigator.vibrate(8);
+  const c = document.createElement('canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  const ctx = c.getContext('2d');
+  if (facing === 'user'){ ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(v, 0, 0, c.width, c.height);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+  try {
+    await addPhoto(blob, curAlbum === 'all' || curAlbum === 'none' ? null : curAlbum);
+    shotCount++;
+    $('#camCount').textContent = shotCount + ' saved';
+    const u = await thumbURL(items[0].id);
+    $('#camLast').innerHTML = '<img alt="">';
+    $('#camLast').firstChild.src = u;
+  } catch(e){ toast('Could not save that shot.'); }
+}
+
+/* ---------------- Viewer ---------------- */
+let vList = [], vIdx = 0;
+async function openViewer(id){
+  vList = visible().map(i => i.id);
+  vIdx = vList.indexOf(id);
+  show('viewer');
+  $('#viewer').classList.remove('vhide');
+  $('#slides').innerHTML = vList.map(() => '<div class="slide"><img alt=""></div>').join('');
+  place(false);
+  await paintSlide(vIdx); paintMeta();
+  paintSlide(vIdx+1); paintSlide(vIdx-1);
+}
+function place(anim){
+  const s = $('#slides');
+  s.style.transition = anim ? '' : 'none';
+  s.style.transform = 'translateX(' + (-vIdx * 100) + '%)';
+  if (!anim) requestAnimationFrame(() => s.style.transition = '');
+}
+async function paintSlide(i){
+  if (i < 0 || i >= vList.length) return;
+  const img = $('#slides').children[i].querySelector('img');
+  if (img.src) return;
+  try { img.src = await fullURL(vList[i]); } catch(e){}
+}
+function paintMeta(){
+  const it = items.find(i => i.id === vList[vIdx]); if (!it) return;
+  const d = new Date(it.ts);
+  $('#vMeta').textContent = d.toLocaleDateString(undefined, { day:'numeric', month:'short', year:'numeric' })
+    + ' · ' + d.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' })
+    + '  (' + (vIdx+1) + '/' + vList.length + ')';
+}
+function goTo(i){
+  if (i < 0 || i >= vList.length) { place(true); return; }
+  vIdx = i; place(true); paintMeta();
+  paintSlide(i); paintSlide(i+1); paintSlide(i-1);
+}
+(function viewerGestures(){
+  const el = $('#viewer'); let x0 = 0, y0 = 0, dx = 0, drag = false, moved = false, t0 = 0;
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { drag = false; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; drag = true; moved = false; t0 = Date.now();
+    $('#slides').style.transition = 'none';
+  }, {passive:true});
+  el.addEventListener('touchmove', e => {
+    if (!drag || e.touches.length !== 1) return;
+    dx = e.touches[0].clientX - x0;
+    const dy = e.touches[0].clientY - y0;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) moved = true;
+    if (Math.abs(dy) > Math.abs(dx) * 1.6) return;
+    $('#slides').style.transform = 'translateX(calc(' + (-vIdx * 100) + '% + ' + dx + 'px))';
+  }, {passive:true});
+  el.addEventListener('touchend', e => {
+    if (!drag) return; drag = false;
+    $('#slides').style.transition = '';
+    const quick = Date.now() - t0 < 260 && Math.abs(dx) > 40;
+    if (dx < -70 || (quick && dx < 0)) goTo(vIdx + 1);
+    else if (dx > 70 || (quick && dx > 0)) goTo(vIdx - 1);
+    else { place(true); if (!moved) $('#viewer').classList.toggle('vhide'); }
+  });
+  document.addEventListener('keydown', e => {
+    if (!$('#viewer').classList.contains('on')) return;
+    if (e.key === 'ArrowRight') goTo(vIdx + 1);
+    if (e.key === 'ArrowLeft')  goTo(vIdx - 1);
+    if (e.key === 'Escape') $('#vClose').click();
+  });
+})();
+$('#vClose').onclick = () => { show('app'); renderGrid(); };
+$('#vDel').onclick = () => confirmDelete([vList[vIdx]]);
+$('#vMove').onclick = () => moveSheet([vList[vIdx]]);
+$('#vInfo').onclick = () => {
+  const it = items.find(i => i.id === vList[vIdx]); if (!it) return;
+  const al = it.album ? (albums.find(a => a.id === it.album)?.name || '—') : 'Unsorted';
+  openSheet(`<div class="sh">Photo details</div>
+    <div class="row"><div class="g"><div class="t">${it.w} × ${it.h}</div><div class="d">Dimensions</div></div></div>
+    <div class="row"><div class="g"><div class="t">${fmtBytes(it.size)}</div><div class="d">Encrypted size</div></div></div>
+    <div class="row"><div class="g"><div class="t">${new Date(it.ts).toLocaleString()}</div><div class="d">Added</div></div></div>
+    <div class="row"><div class="g"><div class="t">${escapeHtml(al)}</div><div class="d">Album</div></div></div>`);
 };
-$('restoreBtn').onclick=()=>{
-  if(!confirm('Restoring replaces everything currently in this vault with the backup (and its passcode). Continue?')) return;
-  $('restoreInput').click();
+
+/* ---------------- Settings ---------------- */
+$('#btnSettings').onclick = async () => {
+  const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : {};
+  const used = est.usage ? fmtBytes(est.usage) : '—';
+  const quota = est.quota ? fmtBytes(est.quota) : '—';
+  const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
+  openSheet(`
+    <div class="sh">Security</div>
+    <div class="row"><div class="g"><div class="t">Lock when I leave the app</div><div class="d">Re-ask for the passcode after this long</div></div>
+      <select id="setAL">
+        <option value="0">Immediately</option><option value="60">1 minute</option>
+        <option value="300">5 minutes</option><option value="900">15 minutes</option></select></div>
+    <button class="row" id="setStrip"><div class="g"><div class="t">Remove location data on import</div><div class="d">Re-saves imported photos without GPS or device tags</div></div>
+      <div class="sw ${settings.strip?'on':''}"></div></button>
+    <button class="row" id="setPass"><div class="g"><div class="t">Change passcode</div><div class="d">Instant — your photos aren't re-encrypted</div></div></button>
+
+    <div class="sh">Your data</div>
+    <button class="row" id="setExport"><div class="g"><div class="t">Save an encrypted backup</div><div class="d">${items.length} photo${items.length===1?'':'s'} · stays encrypted in the file</div></div></button>
+    <button class="row" id="setImport"><div class="g"><div class="t">Restore from a backup</div><div class="d">Replaces everything currently in the vault</div></div></button>
+    <button class="row" id="setVerify"><div class="g"><div class="t">Check every photo opens</div><div class="d">Decrypts all of them and reports any damage</div></div></button>
+    <div class="row"><div class="g"><div class="t">${used} used of ${quota}</div><div class="d">${persisted ? 'Storage marked as persistent' : 'Storage not yet marked persistent'}</div></div></div>
+
+    <div class="sh">Danger</div>
+    <button class="row dz" id="setWipe"><div class="g"><div class="t">Erase this vault</div><div class="d">Deletes every photo and the key. Unrecoverable.</div></div></button>
+    <div class="row"><div class="g"><div class="d">Nothing in this app is sent anywhere. It has no network permission at all.</div></div></div>`);
+
+  $('#setAL').value = String(settings.autolock);
+  $('#setAL').onchange = e => saveSettings({ autolock:+e.target.value });
+  $('#setStrip').onclick = e => { settings.strip = !settings.strip;
+    $('#setStrip .sw').classList.toggle('on', settings.strip); saveSettings({}); };
+  $('#setPass').onclick   = () => { closeSheet(); changePass(); };
+  $('#setExport').onclick = () => { closeSheet(); exportBackup(); };
+  $('#setImport').onclick = () => { closeSheet(); $('#backupPick').click(); };
+  $('#setVerify').onclick = () => { closeSheet(); verifyAll(); };
+  $('#setWipe').onclick   = () => { closeSheet(); wipeVault(); };
 };
-$('restoreInput').onchange=async e=>{
-  const f=e.target.files[0]; e.target.value='';
-  if(!f) return;
-  busy(true,'Restoring…');
-  try{
-    const j=JSON.parse(await f.text());
-    if(j.format!=='ledger-backup') throw new Error('bad');
-    await tx('photos','readwrite',s=>s.clear());
-    await tx('blobs','readwrite',s=>s.clear());
-    await metaSet('vault',j.vault);
-    let i=0;
-    for(const p of j.photos){
-      const {iv,data,...rest}=p;
-      await photoPut({...rest,thumbIv:a2b(p.thumbIv),thumb:a2b(p.thumb)});
-      await blobPut({id:p.id,iv:a2b(iv),data:a2b(data)});
-      i++; $('busyLabel').textContent=`Restoring ${i} / ${j.photos.length}`;
+async function saveSettings(p){ Object.assign(settings, p); await dbPut('meta', { k:'settings', v:settings }); }
+
+function changePass(){
+  askText('New passcode', 'Six digits or more, or a longer passphrase. Your photos stay as they are — only the key wrapping changes.', '', async v => {
+    if (!v || v.length < 6) { toast('Too short.'); return; }
+    askText('Type it once more', '', '', async v2 => {
+      if (v !== v2) { toast("Those didn't match."); return; }
+      busy(true, 'Rewrapping the key…');
+      const m = await dbGet('meta', 'vault');
+      const rawKey = await crypto.subtle.exportKey('raw', await reExportable());
+      const salt = rnd(16), k = await kek(v, salt, ITERS);
+      const w = await enc(rawKey, k);
+      await dbPut('meta', { k:'vault', salt, iters:ITERS, wiv:w.iv, wct:w.ct });
+      busy(false); toast('Passcode changed');
+    }, true);
+  }, true);
+}
+// MK itself is non-extractable; rewrapping uses the raw copy held only while unlocked.
+async function reExportable(){
+  if (!MKRAW) throw new Error('locked');
+  return crypto.subtle.importKey('raw', MKRAW, 'AES-GCM', true, ['encrypt','decrypt']);
+}
+
+/* ---------------- Backup ---------------- */
+const b64 = buf => { const u = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i+8192));
+  return btoa(s); };
+const unb64 = s => { const bin = atob(s), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+
+async function exportBackup(){
+  busy(true, 'Building backup…');
+  const meta = await dbGet('meta', 'vault');
+  const rawItems = await dbAll('items');
+  const rawAlbums = await dbAll('albums');
+  const head = { v:1, made:Date.now(),
+    salt:b64(meta.salt), iters:meta.iters, wiv:b64(meta.wiv), wct:b64(meta.wct),
+    albums: rawAlbums.map(a => ({ id:a.id, iv:b64(a.iv), ct:b64(a.ct) })),
+    items: rawItems.map(r => ({ id:r.id, album:r.album, ts:r.ts, type:r.type, w:r.w, h:r.h, size:r.size,
+      iv:b64(r.iv), tiv:b64(r.tiv), len:r.ct.byteLength, tlen:r.tct.byteLength })) };
+  const hb = te.encode(JSON.stringify(head));
+  const lead = new Uint8Array(8);
+  lead.set(te.encode('PVLT'), 0);
+  new DataView(lead.buffer).setUint32(4, hb.byteLength, false);
+  const parts = [lead, hb];
+  for (const r of rawItems){ parts.push(r.ct, r.tct); }
+  const blob = new Blob(parts, { type:'application/octet-stream' });
+  busy(false);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'archive-' + new Date().toISOString().slice(0,10) + '.vault';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+  toast('Backup saved. It needs your passcode to open.');
+}
+$('#backupPick').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  askConfirm('Restore this backup?', 'Everything currently in the vault is replaced, and afterwards you unlock with the passcode that backup was made with.', 'Restore', true,
+    () => doRestore(f));
+};
+$('#lkRestore').onclick = () => $('#backupPick').click();
+
+async function doRestore(f){
+  busy(true, 'Reading backup…');
+  try {
+    const lead = new Uint8Array(await f.slice(0, 8).arrayBuffer());
+    if (tdec.decode(lead.subarray(0,4)) !== 'PVLT') throw new Error('Not a backup file');
+    const hlen = new DataView(lead.buffer).getUint32(4, false);
+    const head = JSON.parse(tdec.decode(await f.slice(8, 8 + hlen).arrayBuffer()));
+    await dbClear('items'); await dbClear('albums');
+    await dbPut('meta', { k:'vault', salt:unb64(head.salt), iters:head.iters,
+                          wiv:unb64(head.wiv), wct:unb64(head.wct) });
+    for (const a of head.albums) await dbPut('albums', { id:a.id, iv:unb64(a.iv), ct:unb64(a.ct) });
+    let off = 8 + hlen, n = 0;
+    for (const it of head.items){
+      busy(true, 'Restoring ' + (++n) + ' of ' + head.items.length + '…');
+      const ct  = await f.slice(off, off + it.len).arrayBuffer(); off += it.len;
+      const tct = await f.slice(off, off + it.tlen).arrayBuffer(); off += it.tlen;
+      await dbPut('items', { id:it.id, album:it.album, ts:it.ts, type:it.type, w:it.w, h:it.h, size:it.size,
+                             iv:unb64(it.iv), ct, tiv:unb64(it.tiv), tct });
     }
     busy(false);
-    thumbURLs.forEach(u=>URL.revokeObjectURL(u)); thumbURLs.clear();
-    toast('Restored — unlock with the backup’s passcode',3200);
-    vaultMeta=await metaGet('vault'); lock();
-  }catch(err){busy(false);toast('That file is not a valid Ledger backup');}
-};
-
-/* ================= Camera ================= */
-let camStream=null, facing='environment', shotCount=0, lastShotURL=null;
-let camMode='photo', recorder=null, recChunks=[], recStart=0, recTick=null;
-async function openCam(){
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('captureInput').click();return;}
-  $('camScreen').classList.add('on');
-  shotCount=0; updateBadge();
-  try{await startCam();}
-  catch(e){
-    $('camScreen').classList.remove('on');
-    if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError')) toast('Camera access was denied — allow it in Settings, or use + to import');
-    else $('captureInput').click(); // fall back to the native camera sheet
+    MK = null; MKRAW = null; purgeURLs();
+    toast('Restored. Unlock with that backup\'s passcode.');
+    lockFlow();
+  } catch(err){
+    busy(false); toast('That file could not be read: ' + err.message);
   }
 }
-async function startCam(){
-  stopCam();
-  const constraints={audio:camMode==='video',
-    video:{facingMode:facing,width:{ideal:4096},height:{ideal:3072}}};
-  try{camStream=await navigator.mediaDevices.getUserMedia(constraints);}
-  catch(e){
-    if(camMode==='video'){ // mic denied — record without sound
-      camStream=await navigator.mediaDevices.getUserMedia({audio:false,video:constraints.video});
-      toast('Recording without sound — microphone unavailable');
-    }else throw e;
+async function verifyAll(){
+  const all = await dbAll('items');
+  let bad = 0, n = 0;
+  for (const r of all){
+    busy(true, 'Checking ' + (++n) + ' of ' + all.length + '…');
+    try { await dec(r.iv, r.ct); } catch(e){ bad++; }
   }
-  const v=$('camVideo'); v.srcObject=camStream;
-  v.classList.toggle('mirror',facing==='user');
-  await v.play().catch(()=>{});
-}
-function stopCam(){
-  stopRec(true);
-  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
-  $('camVideo').srcObject=null;
-}
-function closeCam(){
-  stopCam(); $('camScreen').classList.remove('on');
-  if(lastShotURL){URL.revokeObjectURL(lastShotURL);lastShotURL=null;}
-  $('camLast').innerHTML='<svg viewBox="0 0 24 24" id="camLastIcon"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9.5" cy="9.5" r="1.6"/><path d="M4 16l4.5-4.5L13 16l3-3 4 4"/></svg><span id="camBadge"></span>';
-  if(shotCount){refresh();updateStorage();toast(shotCount+(shotCount>1?' items':' item')+' saved to vault — not in camera roll');}
-}
-function updateBadge(){const b=$('camBadge');if(!b)return;b.style.display=shotCount?'flex':'none';b.textContent=shotCount;}
-function setLastShot(blob){
-  if(lastShotURL) URL.revokeObjectURL(lastShotURL);
-  lastShotURL=URL.createObjectURL(blob);
-  $('camLast').innerHTML='<img src="'+lastShotURL+'" alt=""><span id="camBadge"></span>';
-  updateBadge();
-}
-$('camFab').onclick=openCam;
-$('camClose').onclick=closeCam;
-$('camFlip').onclick=async()=>{if(recorder)return toast('Stop recording first');facing=facing==='environment'?'user':'environment';try{await startCam();}catch(e){toast('Could not switch camera');}};
-$('camModeBtn').onclick=async()=>{
-  if(recorder) return toast('Stop recording first');
-  if(camMode==='photo'&&!window.MediaRecorder) return toast('Video recording is not supported on this iOS version');
-  camMode=camMode==='photo'?'video':'photo';
-  $('camModeIcon').innerHTML=camMode==='video'
-    ?'<path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.4"/>'
-    :'<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3z"/>';
-  toast(camMode==='video'?'Video mode — tap the shutter to record (3 min max)':'Photo mode');
-  try{await startCam();}catch(e){toast('Camera error');}
-};
-$('shutterBtn').onclick=async()=>{
-  const v=$('camVideo');
-  if(!camStream||!v.videoWidth) return;
-  if(camMode==='video'){recorder?stopRec():startRec();return;}
-  $('camFlash').classList.remove('pop'); void $('camFlash').offsetWidth; $('camFlash').classList.add('pop');
-  const c=document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight;
-  c.getContext('2d').drawImage(v,0,0);
-  c.toBlob(async b=>{
-    if(!b) return toast('Capture failed');
-    try{
-      const f=new File([b],'Capture '+new Date().toLocaleString()+'.jpg',{type:'image/jpeg'});
-      const thumbBuf=await addImage(f);
-      shotCount++; setLastShot(new Blob([thumbBuf],{type:'image/jpeg'}));
-    }catch(e){toast('Could not save capture');}
-  },'image/jpeg',.92);
-};
-function startRec(){
-  recChunks=[];
-  try{recorder=new MediaRecorder(camStream);}catch(e){recorder=null;return toast('Video recording is not supported here');}
-  recorder.ondataavailable=e=>{if(e.data&&e.data.size)recChunks.push(e.data);};
-  recorder.onstop=onRecStop;
-  recorder.start(1000);
-  recStart=Date.now();
-  $('shutterBtn').classList.add('rec'); $('recTimer').style.display='block'; $('recTimer').textContent='0:00';
-  recTick=setInterval(()=>{
-    const s=Math.floor((Date.now()-recStart)/1000);
-    $('recTimer').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-    if(s>=180) stopRec();
-  },250);
-}
-function stopRec(silent){
-  clearInterval(recTick); recTick=null;
-  $('shutterBtn').classList.remove('rec'); $('recTimer').style.display='none';
-  if(recorder&&recorder.state!=='inactive'){if(silent)recorder.onstop=null;recorder.stop();}
-  if(silent) recorder=null;
-}
-async function onRecStop(){
-  const type=(recorder&&recorder.mimeType)||'video/mp4';
-  recorder=null;
-  const blob=new Blob(recChunks,{type}); recChunks=[];
-  if(!blob.size) return toast('Recording failed');
-  busy(true,'Encrypting video…');
-  try{
-    const f=new File([blob],'Video '+new Date().toLocaleString()+'.mp4',{type});
-    const thumbBuf=await addVideo(f);
-    shotCount++; setLastShot(new Blob([thumbBuf],{type:'image/jpeg'}));
-  }catch(e){toast('Could not save video');}
   busy(false);
+  toast(bad ? bad + ' photo' + (bad>1?'s':'') + ' could not be decrypted.' : 'All ' + all.length + ' photos open fine.');
 }
-$('camLast').onclick=()=>{if(shotCount)closeCam();};
-$('captureInput').onchange=async e=>{
-  const f=e.target.files[0]; e.target.value='';
-  if(!f) return;
-  busy(true,'Encrypting…');
-  try{
-    if((f.type||'').startsWith('video')) await addVideo(f); else await addImage(f);
-    busy(false); await refresh(); updateStorage();
-    toast('Saved to vault — not in camera roll');
-  }catch(err){busy(false);toast('Could not save capture');}
-};
+function wipeVault(){
+  askText('Erase everything', 'Type ERASE to confirm. Every photo, the album list and the key are deleted. A backup file you already saved is not affected.', '', async v => {
+    if (v !== 'ERASE'){ toast('Not erased.'); return; }
+    busy(true, 'Erasing…');
+    await dbClear('items'); await dbClear('albums'); await dbClear('meta');
+    purgeURLs(); MK = null; MKRAW = null; items = []; albums = [];
+    busy(false); toast('Vault erased'); setupFlow();
+  });
+}
 
-/* ================= Flip guard =================
-   Face-down detection via gravity on the z-axis. Modes:
-   0 = off · 1 = lock · 2 = lock + jump to Messages */
-const flipNames=['Off','Lock','Lock + Messages'];
-let flipMode=+(localStorage.getItem('ledger-flip')||0), flipTimer=null, motionOn=false;
-function flipLblUpd(){$('flipLbl').textContent=flipNames[flipMode];}
-function onMotion(e){
-  if(!masterKey||flipMode===0) return;
-  const g=e.accelerationIncludingGravity; if(!g||g.z==null) return;
-  // face-down: gravity z is strongly positive, and sustained ~450ms to avoid false triggers
-  if(g.z>7.2){
-    if(!flipTimer) flipTimer=setTimeout(()=>{
-      flipTimer=null;
-      const jump=flipMode===2;
-      lock();
-      if(jump) location.href='sms:';
-    },450);
-  }else if(flipTimer){clearTimeout(flipTimer);flipTimer=null;}
+/* ---------------- Prompts ---------------- */
+function askText(title, note, val, cb, isPass){
+  openSheet(`<div class="prompt"><h3>${escapeHtml(title)}</h3>${note ? '<p>'+escapeHtml(note)+'</p>' : ''}
+    <input id="pIn" type="${isPass?'password':'text'}" value="${escapeHtml(val||'')}" autocapitalize="off" spellcheck="false" autocomplete="off">
+    <div class="btns"><button id="pNo">Cancel</button><button class="go" id="pYes">Save</button></div></div>`);
+  setTimeout(() => $('#pIn').focus(), 120);
+  $('#pNo').onclick = closeSheet;
+  $('#pYes').onclick = () => { const v = $('#pIn').value; closeSheet(); cb(v); };
+  $('#pIn').onkeydown = e => { if (e.key === 'Enter') $('#pYes').click(); };
 }
-function startMotion(){
-  if(motionOn) return;
-  window.addEventListener('devicemotion',onMotion);
-  motionOn=true;
+function askConfirm(title, note, label, danger, cb){
+  openSheet(`<div class="prompt"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(note)}</p>
+    <div class="btns"><button id="cNo">Cancel</button><button class="go ${danger?'dz':''}" id="cYes">${escapeHtml(label)}</button></div></div>`);
+  $('#cNo').onclick = closeSheet;
+  $('#cYes').onclick = () => { closeSheet(); cb(); };
 }
-async function enableFlip(){
-  try{
-    if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
-      const r=await DeviceMotionEvent.requestPermission();
-      if(r!=='granted'){toast('Motion access denied — enable it in Settings › Safari');flipMode=0;return;}
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fmtBytes(b){ if (!b) return '0 B'; const u = ['B','KB','MB','GB','TB'];
+  const i = Math.floor(Math.log(b)/Math.log(1024)); return (b/Math.pow(1024,i)).toFixed(i?1:0) + ' ' + u[i]; }
+
+/* ---------------- Auto-lock ---------------- */
+function armIdle(){
+  clearTimeout(idleTimer);
+  if (!MK || settings.autolock === 0) return;
+  idleTimer = setTimeout(() => { if (MK) lockNow(); }, settings.autolock * 1000);
+}
+['touchstart','click','keydown'].forEach(ev =>
+  document.addEventListener(ev, () => { if (MK) armIdle(); }, { passive:true, capture:true }));
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden){
+    hiddenAt = Date.now();
+    if (MK) $('#cover').classList.add('on');   // blank the app-switcher preview
+    stopStream();
+  } else {
+    $('#cover').classList.remove('on');
+    if (MK){
+      const gone = (Date.now() - hiddenAt) / 1000;
+      if (settings.autolock === 0 || gone > settings.autolock) lockNow();
+      else { armIdle(); if ($('#cam').classList.contains('on')) startCam(true); }
     }
-    startMotion();
-  }catch(e){toast('Motion sensors unavailable on this device');flipMode=0;}
-}
-$('flipBtn').onclick=async()=>{
-  flipMode=(flipMode+1)%3;
-  if(flipMode>0) await enableFlip();
-  localStorage.setItem('ledger-flip',flipMode);
-  flipLblUpd();
-  if(flipMode>0) toast(flipMode===1?'Turn the phone face-down to lock':'Face-down locks the vault and opens Messages');
-};
-
-// iOS grants motion access only from a user gesture — re-arm on first tap after unlock
-document.addEventListener('touchend',()=>{if(flipMode>0&&!motionOn&&masterKey)enableFlip();},{passive:true});
-
-/* ================= Auto-lock ================= */
-let idleT;
-function resetIdle(){clearTimeout(idleT);if(masterKey)idleT=setTimeout(lock,idleMs);}
-['touchstart','click','keydown'].forEach(ev=>document.addEventListener(ev,resetIdle,{passive:true}));
-let pickerOpen=false;
-[$('fileInput'),$('restoreInput'),$('captureInput')].forEach(inp=>{
-  inp.addEventListener('click',()=>{pickerOpen=true;});
-  inp.addEventListener('change',()=>{pickerOpen=false;});
+  }
 });
-window.addEventListener('focus',()=>setTimeout(()=>pickerOpen=false,1200));
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&masterKey&&!pickerOpen)lock();});
-window.addEventListener('pagehide',()=>{if(masterKey&&!pickerOpen)lock();});
+window.addEventListener('pagehide', () => { if (MK) $('#cover').classList.add('on'); });
 
-/* ================= Boot ================= */
-(async function(){
-  buildPad();
-  await openDB();
-  if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
-  vaultMeta=await metaGet('vault');
-  mode=vaultMeta?'unlock':'setup';
-  setSub(); drawDots();
+async function requestPersist(){
+  try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted()))
+    await navigator.storage.persist(); } catch(e){}
+}
+
+/* ---------------- Boot ---------------- */
+(async function boot(){
+  if (!crypto.subtle){
+    document.body.innerHTML = '<div style="padding:60px 26px;color:#8A96A4;font-family:sans-serif">' +
+      'This app needs a secure connection. Open it over https:// and it will work.</div>';
+    return;
+  }
+  db = await openDB();
+  const v = await dbGet('meta', 'vault');
+  v ? lockFlow() : setupFlow();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
 </script>
 </body>
