@@ -219,6 +219,8 @@ button.cellrow:active{background:var(--raised2)}
 .cside img{width:100%;height:100%;object-fit:cover}
 .cside.lit{background:#fff}
 .cside.lit svg{stroke:#000;fill:#000}
+.pill.tapme{color:#fff;font-weight:590}
+.pill.tapme:active{transform:scale(.94)}
 .pill{background:rgba(0,0,0,.42);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
   border-radius:15px;padding:6px 14px;font-size:13px;color:#fff;font-variant-numeric:tabular-nums}
 .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
@@ -231,8 +233,8 @@ button.cellrow:active{background:var(--raised2)}
 #slides{position:absolute;inset:0;display:flex;will-change:transform}
 .slide{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
 .zoom{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;will-change:transform}
-.zoom img{max-width:100%;max-height:100%;object-fit:contain;display:block}
-.zoom img.ph{position:absolute;filter:blur(8px);transform:scale(1.03)}
+.zoom img{max-width:100%;max-height:100%;object-fit:contain;display:block;position:relative;z-index:1}
+.zoom img.ph{position:absolute;z-index:0;filter:blur(8px);transform:scale(1.03)}
 .vtop,.vbot{position:absolute;left:0;right:0;z-index:3;display:flex;align-items:center;
   transition:opacity .25s;background:rgba(0,0,0,.4);
   -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
@@ -317,6 +319,7 @@ button.cellrow:active{background:var(--raised2)}
   </div>
   <div class="toolbar" id="selBar">
     <button class="tool" id="btnMove"><svg viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 014.5 6h4L11 8h8.5A1.5 1.5 0 0121 9.5v8A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/></svg>Move</button>
+    <button class="tool" id="btnShare"><svg viewBox="0 0 24 24"><path d="M12 15.5V3.5"/><path d="M8.2 7.3L12 3.5l3.8 3.8"/><path d="M5 13.5v5.6a1.4 1.4 0 001.4 1.4h11.2a1.4 1.4 0 001.4-1.4v-5.6"/></svg>Save out</button>
     <button class="tool" id="btnSelAll"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>Select all</button>
     <button class="tool dz" id="btnDel"><svg viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V5.2a1.2 1.2 0 011.2-1.2h2.6a1.2 1.2 0 011.2 1.2V7M6.5 7l.9 12.9a1.2 1.2 0 001.2 1.1h6.8a1.2 1.2 0 001.2-1.1L17.5 7"/></svg>Delete</button>
   </div>
@@ -329,6 +332,7 @@ button.cellrow:active{background:var(--raised2)}
   <div class="camtop">
     <button class="cside" id="camClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <div class="pill" id="camCount">0 saved</div>
+    <button class="pill tapme" id="camHQ">Full quality</button>
     <button class="cside" id="camTorch" aria-label="Light"><svg viewBox="0 0 24 24"><path d="M13 2.5L4.8 13.2H11l-1 8.3 8.2-10.7H12z"/></svg></button>
   </div>
   <div class="cambot">
@@ -348,6 +352,7 @@ button.cellrow:active{background:var(--raised2)}
     <div style="width:40px"></div>
   </div>
   <div class="vbot">
+    <button class="ico" id="vShare" aria-label="Save out"><svg viewBox="0 0 24 24"><path d="M12 15.5V3.5"/><path d="M8.2 7.3L12 3.5l3.8 3.8"/><path d="M5 13.5v5.6a1.4 1.4 0 001.4 1.4h11.2a1.4 1.4 0 001.4-1.4v-5.6"/></svg></button>
     <button class="ico" id="vMove" aria-label="Move"><svg viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 014.5 6h4L11 8h8.5A1.5 1.5 0 0121 9.5v8A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/></svg></button>
     <button class="ico" id="vInfo" aria-label="Details"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8h.01"/></svg></button>
     <button class="ico" id="vDel" aria-label="Delete"><svg viewBox="0 0 24 24" style="stroke:var(--danger)"><path d="M4 7h16M9.5 7V5.2a1.2 1.2 0 011.2-1.2h2.6a1.2 1.2 0 011.2 1.2V7M6.5 7l.9 12.9a1.2 1.2 0 001.2 1.1h6.8a1.2 1.2 0 001.2-1.1L17.5 7"/></svg></button>
@@ -360,6 +365,7 @@ button.cellrow:active{background:var(--raised2)}
 <div id="toast"></div>
 <div id="busy"><div class="spin"></div><div id="busyTxt">Working…</div></div>
 <input type="file" id="filePick" accept="image/*" multiple class="hidden">
+<input type="file" id="camNative" accept="image/*" capture="environment" class="hidden">
 <input type="file" id="backupPick" accept=".vault,application/octet-stream" class="hidden">
 
 <script>
@@ -374,7 +380,8 @@ const tap = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch(
 
 let MK = null, MKRAW = null;
 let items = [], albums = [], curAlbum = 'all';
-let settings = { autolock: 60, strip: true };
+let settings = { autolock: 60, reencode: false };
+let blobCache = new Map();   // decrypted full-size blobs for the slides on screen
 let urlCache = new Map(), selMode = false, sel = new Set();
 let hiddenAt = 0, idleTimer = null;
 
@@ -451,22 +458,51 @@ function reencode(src, max, q){
   c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
   return new Promise(r => c.toBlob(r, 'image/jpeg', q));
 }
-const light = r => ({ id:r.id, album:r.album, ts:r.ts, type:r.type, w:r.w, h:r.h, size:r.size });
+const light = r => ({ id:r.id, album:r.album, ts:r.ts, type:r.type, w:r.w, h:r.h, size:r.size, orig:r.orig !== false });
 
-async function addPhoto(blob, album){
-  const bm = await toBitmap(blob);
-  let full = blob, type = blob.type || 'image/jpeg';
-  if (settings.strip || !/^image\/(jpeg|png|webp)$/.test(type)){
-    full = await reencode(bm, 3200, 0.92); type = 'image/jpeg';
+async function makeThumb(blob){
+  // resize during decode when the browser supports it — a 48MP source never
+  // has to land on a canvas, which is where iOS runs out of memory
+  try {
+    const bm = await createImageBitmap(blob,
+      { imageOrientation:'from-image', resizeWidth:512, resizeQuality:'high' });
+    const out = await reencode(bm, 512, 0.74);
+    if (bm.close) bm.close();
+    return out;
+  } catch(e){
+    const bm = await toBitmap(blob);
+    const out = await reencode(bm, 512, 0.74);
+    if (bm.close) bm.close();
+    return out;
   }
-  const thumb = await reencode(bm, 400, 0.72);
+}
+async function dims(blob){
+  try {
+    const bm = await createImageBitmap(blob);
+    const d = { w:bm.width, h:bm.height };
+    if (bm.close) bm.close();
+    return d;
+  } catch(e){ return { w:0, h:0 }; }
+}
+async function addPhoto(blob, album){
+  let full = blob, type = blob.type || 'image/jpeg';
+  let d = await dims(blob);
+  // Default path: the original file goes in untouched. No canvas, no resize,
+  // no second JPEG generation — the bytes you had are the bytes stored.
+  if (settings.reencode){
+    const bm = await toBitmap(blob);
+    full = await reencode(bm, 4096, 0.95);
+    type = 'image/jpeg';
+    if (bm.close) bm.close();
+    d = await dims(full);
+  }
+  const thumb = await makeThumb(blob);
   const [fb, tb] = await Promise.all([full.arrayBuffer(), thumb.arrayBuffer()]);
   const a = await enc(fb), b = await enc(tb);
   const rec = { id:uid(), album:album ?? null, ts:Date.now(), type,
-                w:bm.width || bm.naturalWidth, h:bm.height || bm.naturalHeight,
+                w:d.w, h:d.h, orig:!settings.reencode,
                 size:fb.byteLength, iv:a.iv, ct:a.ct, tiv:b.iv, tct:b.ct };
   await dbPut('items', rec);
-  if (bm.close) bm.close();
   items.unshift(light(rec));
   return rec;
 }
@@ -481,8 +517,10 @@ async function fullURL(id){
   const key = 'F' + id;
   if (urlCache.has(key)) return urlCache.get(key);
   const r = await dbGet('items', id); if (!r) return null;
-  const url = URL.createObjectURL(new Blob([await dec(r.iv, r.ct)], { type:r.type || 'image/jpeg' }));
+  const blob = new Blob([await dec(r.iv, r.ct)], { type:r.type || 'image/jpeg' });
+  const url = URL.createObjectURL(blob);
   urlCache.set(key, url);
+  blobCache.set(id, blob);
   trimFull();
   return url;
 }
@@ -493,13 +531,18 @@ function trimFull(){
     const k = full.shift();
     URL.revokeObjectURL(urlCache.get(k));
     urlCache.delete(k);
+    blobCache.delete(k.slice(1));
   }
 }
 function dropURLs(id){
   ['', 'F'].forEach(p => { const u = urlCache.get(p + id);
     if (u){ URL.revokeObjectURL(u); urlCache.delete(p + id); } });
+  blobCache.delete(id);
 }
-function purgeURLs(){ urlCache.forEach(u => URL.revokeObjectURL(u)); urlCache.clear(); }
+function purgeURLs(){
+  urlCache.forEach(u => URL.revokeObjectURL(u));
+  urlCache.clear(); blobCache.clear();
+}
 
 /* ══════ Chrome ══════ */
 const show = id => { $$('.screen').forEach(s => s.classList.remove('on')); $('#'+id).classList.add('on'); };
@@ -647,7 +690,12 @@ $('#btnLock').onclick = lockNow;
 /* ══════ Load ══════ */
 async function loadAll(){
   const s = await dbGet('meta', 'settings');
-  if (s && s.v) settings = Object.assign(settings, s.v);
+  if (s && s.v){
+    const v = Object.assign({}, s.v);
+    if (v.reencode === undefined && v.strip !== undefined) v.reencode = false; // old default off
+    delete v.strip;
+    settings = Object.assign(settings, v);
+  }
   items = (await dbAll('items')).map(light).sort((a,b) => b.ts - a.ts);
   albums = [];
   for (const a of await dbAll('albums')){
@@ -754,7 +802,7 @@ function toggleSel(id, el){
 function paintSelCount(){
   const n = sel.size;
   $('#navTitle').textContent = $('#bigTitle').textContent = n ? `${n} selected` : 'Select photos';
-  $('#btnMove').disabled = $('#btnDel').disabled = !n;
+  $('#btnMove').disabled = $('#btnDel').disabled = $('#btnShare').disabled = !n;
 }
 function paintSelUI(){
   document.body.classList.toggle('selmode', selMode);
@@ -886,6 +934,74 @@ $('#filePick').onchange = async e => {
              : `${n} added. Delete the originals in Photos, including Recently Deleted.`);
 };
 
+/* ══════ Save photos back out ══════ */
+const extFor = t => t === 'image/png' ? 'png' : t === 'image/webp' ? 'webp'
+                  : t === 'image/heic' ? 'heic' : 'jpg';
+
+async function stripMeta(blob){
+  // JPEG only: drop every APPn segment (EXIF, GPS, thumbnails, maker notes)
+  // without touching the compressed image data, so quality is untouched.
+  if (blob.type && blob.type !== 'image/jpeg') return blob;
+  try {
+    const b = new Uint8Array(await blob.arrayBuffer());
+    if (b[0] !== 0xFF || b[1] !== 0xD8) return blob;
+    const keep = [b.subarray(0, 2)];
+    let i = 2;
+    while (i < b.length - 1){
+      if (b[i] !== 0xFF) break;
+      const m = b[i+1];
+      if (m === 0xD8 || m === 0x01 || (m >= 0xD0 && m <= 0xD7)){ i += 2; continue; }
+      if (m === 0xDA){ keep.push(b.subarray(i)); break; }   // image data, copied whole
+      const len = (b[i+2] << 8) | b[i+3];
+      if (!(m >= 0xE0 && m <= 0xEF) && m !== 0xFE) keep.push(b.subarray(i, i + 2 + len));
+      i += 2 + len;
+    }
+    return new Blob(keep, { type:'image/jpeg' });
+  } catch(e){ return blob; }
+}
+async function fileFor(id){
+  let blob = blobCache.get(id);
+  if (!blob){
+    const r = await dbGet('items', id); if (!r) return null;
+    blob = new Blob([await dec(r.iv, r.ct)], { type:r.type || 'image/jpeg' });
+    blobCache.set(id, blob);
+  }
+  const it = items.find(i => i.id === id) || {};
+  const stamp = new Date(it.ts || Date.now()).toISOString().slice(0,19).replace(/[:T]/g,'-');
+  const clean = await stripMeta(blob);
+  return new File([clean], `photo-${stamp}.${extFor(blob.type)}`, { type:blob.type });
+}
+async function exportPhotos(ids){
+  if (!ids.length) return;
+  let files = [];
+  try { files = (await Promise.all(ids.slice(0,20).map(fileFor))).filter(Boolean); } catch(e){}
+  if (!files.length){ toast('Could not decrypt those.'); return; }
+  // Share sheet is the only route to the camera roll on iOS; the files handed
+  // over are the exact decrypted originals, byte for byte.
+  try {
+    if (navigator.canShare && navigator.canShare({ files })){
+      await navigator.share({ files });
+      return;
+    }
+  } catch(e){
+    if (e && e.name === 'AbortError') return;
+  }
+  files.forEach((f, i) => setTimeout(() => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(f); a.download = f.name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+  }, i * 250));
+  toast(files.length === 1 ? 'Saved to Files' : files.length + ' saved to Files');
+}
+function warnThenExport(ids){
+  const n = ids.length;
+  actionSheet(`${n === 1 ? 'This photo' : n + ' photos'} will leave the vault at full original quality. `
+    + 'Anything you save into Photos is no longer encrypted and will sync to iCloud if that is on.',
+    [{ label:n === 1 ? 'Save Photo' : `Save ${n} Photos`, fn: () => exportPhotos(ids) }]);
+}
+$('#vShare').onclick  = () => { if (V.list.length) warnThenExport([V.list[V.i]]); };
+$('#btnShare').onclick = () => { if (sel.size) warnThenExport([...sel]); };
+
 /* ══════ Camera ══════ */
 let stream = null, facing = 'environment', shotCount = 0;
 $('#btnCam').onclick = () => startCam(false);
@@ -893,6 +1009,20 @@ $('#camClose').onclick = () => { stopCam(); show('app'); renderChips(); renderGr
 $('#camFlip').onclick = () => { facing = facing === 'environment' ? 'user' : 'environment'; startCam(true); };
 $('#camShot').onclick = capture;
 $('#camTorch').onclick = toggleTorch;
+$('#camHQ').onclick = () => $('#camNative').click();
+$('#camNative').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  busy(true, 'Encrypting…');
+  try {
+    const dest = (curAlbum === 'all' || curAlbum === 'none') ? null : curAlbum;
+    await addPhoto(f, dest);
+    $('#camCount').textContent = ++shotCount + ' saved';
+    const u = await thumbURL(items[0].id);
+    $('#camLast').innerHTML = '<img alt="">';
+    if (u) $('#camLast').firstChild.src = u;
+    busy(false);
+  } catch(err){ busy(false); toast('Could not save that shot.'); }
+};
 $('#camLast').onclick = () => { if (shotCount){ stopCam(); show('app'); renderChips(); renderGrid(); } };
 
 async function startCam(keep){
@@ -900,7 +1030,7 @@ async function startCam(keep){
   show('cam'); stopStream();
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:{ ideal:facing }, width:{ ideal:4032 }, height:{ ideal:3024 } }, audio:false });
+      video:{ facingMode:{ ideal:facing }, width:{ ideal:4096 }, height:{ ideal:4096 } }, audio:false });
   } catch(err){
     try { stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false }); }
     catch(e2){ show('app'); toast('Camera unavailable. Check this site\u2019s camera permission.'); return; }
@@ -932,7 +1062,7 @@ async function capture(){
   const ctx = c.getContext('2d');
   if (facing === 'user'){ ctx.translate(c.width, 0); ctx.scale(-1, 1); }
   ctx.drawImage(v, 0, 0, c.width, c.height);
-  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.97));
   try {
     const dest = (curAlbum === 'all' || curAlbum === 'none') ? null : curAlbum;
     await addPhoto(blob, dest);
@@ -1196,6 +1326,7 @@ async function openSettings(){
     if (navigator.storage && navigator.storage.persisted) persisted = await navigator.storage.persisted();
   } catch(e){}
   const bytes = items.reduce((a,i) => a + (i.size || 0), 0);
+  const reencoded = items.filter(i => i.orig === false).length;
 
   openSheet(`
     <div class="gsec">
@@ -1204,11 +1335,21 @@ async function openSettings(){
         <button class="cellrow" id="sAL"><div class="g"><div class="t">Auto-lock</div></div>
           <div class="v">${esc(alLabel(settings.autolock))}</div><div class="chev"></div></button>
         <button class="cellrow" id="sPass"><div class="g"><div class="t">Change passcode</div></div><div class="chev"></div></button>
-        <button class="cellrow" id="sStrip"><div class="g"><div class="t">Strip location data</div>
-          <div class="d">Re-saves imports without GPS or device tags</div></div>
-          <div class="sw ${settings.strip ? 'on' : ''}"></div></button>
       </div>
       <div class="gfoot">Auto-lock applies when you leave the app or stop touching it. Changing the passcode is instant — your photos are not re-encrypted.</div>
+    </div>
+
+    <div class="gsec">
+      <div class="ghead">Image quality</div>
+      <div class="group">
+        <button class="cellrow ${settings.reencode ? '' : 'picked'}" data-q="0">
+          <div class="g"><div class="t">Keep originals</div>
+          <div class="d">Exact file, full resolution, nothing re-compressed</div></div><div class="check"></div></button>
+        <button class="cellrow ${settings.reencode ? 'picked' : ''}" data-q="1">
+          <div class="g"><div class="t">Re-encode on import</div>
+          <div class="d">Strips GPS and device tags, capped at 4096px</div></div><div class="check"></div></button>
+      </div>
+      <div class="gfoot">Keep originals is the right choice on a 1TB phone. Location data inside a photo leaks nothing while it sits encrypted in the vault, and it is stripped anyway if you ever save one back out.${reencoded ? ' ' + reencoded + ' photo' + (reencoded > 1 ? 's were' : ' was') + ' imported under the old re-encoding default and cannot be restored — re-import those from the originals if you still have them.' : ''}</div>
     </div>
 
     <div class="gsec">
@@ -1254,11 +1395,10 @@ async function openSettings(){
   $('#sImport').onclick = () => { closeSheet(); $('#backupPick').click(); };
   $('#sVerify').onclick = () => { closeSheet(); later(verifyAll); };
   $('#sWipe').onclick   = () => { closeSheet(); later(wipeVault); };
-  $('#sStrip').onclick  = async () => {
-    settings.strip = !settings.strip;
-    $('#sStrip .sw').classList.toggle('on', settings.strip);
-    tap(6); await saveSettings();
-  };
+  $$('#sheetBody .cellrow[data-q]').forEach(b => b.onclick = async () => {
+    settings.reencode = b.dataset.q === '1';
+    tap(6); await saveSettings(); openSettings();
+  });
 }
 function autoLockSheet(){
   const rows = AL_OPTS.map(([v,l]) =>
