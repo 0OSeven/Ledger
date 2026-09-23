@@ -1,6 +1,6 @@
 /* Private Vault service worker — lets the app launch offline after first load.
    Only caches this app's own files. Makes no third-party requests. */
-const CACHE = 'pvault-v4';
+const CACHE = 'pvault-v5';
 const ASSETS = ['./', './index.html', './icon.png'];
 
 self.addEventListener('install', e => {
