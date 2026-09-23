@@ -572,7 +572,7 @@ async function newAlbumFlow(){const v=await modal({title:"New album",input:true,
 async function newCollectionFlow(){const v=await modal({title:"New folder",input:true,placeholder:"Folder name",ok:"Create"});
   if(v&&v.trim()){S.collections.push({id:uid(),name:v.trim().slice(0,60),albumIds:[]});await saveLibrary();refreshCurrent();toast("Folder created")}}
 [["pick-imgs","pick-imgs"],["pick-vids","pick-vids"],["pick-cam","pick-cam"],["pick-vcam","pick-vcam"]].forEach(([a,b])=>{
-  $(b).addEventListener("change",e=>{const alb=e.target.dataset.album||null;const fs=e.target.files;e.target.value="";if(fs&&fs.length)importFiles(fs,alb)})});
+  $(b).addEventListener("change",e=>{const alb=e.target.dataset.album||null;const fs=[...(e.target.files||[])];e.target.value="";if(fs.length)importFiles(fs,alb)})});
 </script>
 <script>
 "use strict";
